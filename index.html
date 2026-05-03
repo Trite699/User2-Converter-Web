@@ -1,0 +1,772 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title> User 2 Converter</title>
+<style>
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg-primary:#fff;--bg-secondary:#f5f5f5;--bg-success:#e6f9ee;--bg-danger:#fdecea;--bg-warn:#fff8e1;
+  --text-primary:#111;--text-secondary:#666;--text-tertiary:#aaa;
+  --text-success:#1a7a3f;--text-danger:#b71c1c;--text-warn:#7a5800;
+  --border-t:rgba(0,0,0,0.12);--border-s:rgba(0,0,0,0.2);--border-p:rgba(0,0,0,0.35);
+  --r-md:8px;--r-lg:12px;
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg-primary:#1e1e1e;--bg-secondary:#2a2a2a;--bg-success:#0d3320;--bg-danger:#3b1010;--bg-warn:#2a2000;
+    --text-primary:#f0f0f0;--text-secondary:#aaa;--text-tertiary:#666;
+    --text-success:#4caf82;--text-danger:#f08080;--text-warn:#e6c040;
+    --border-t:rgba(255,255,255,0.1);--border-s:rgba(255,255,255,0.2);--border-p:rgba(255,255,255,0.35);
+  }
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:var(--text-primary);background:var(--bg-secondary);min-height:100vh;}
+.wrap{max-width:680px;margin:0 auto;padding:2rem 1rem 4rem;}
+h1{font-size:22px;font-weight:500;margin-bottom:4px;}
+.sub{font-size:13px;color:var(--text-secondary);margin-bottom:20px;}
+.card{background:var(--bg-primary);border:0.5px solid var(--border-t);border-radius:var(--r-lg);padding:1rem 1.25rem;margin-bottom:12px;}
+.card-title{font-size:11px;font-weight:500;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.card-title-right{font-size:11px;font-weight:400;color:var(--text-tertiary);text-transform:none;letter-spacing:0;flex-shrink:0;}
+.drop{display:flex;flex-direction:column;align-items:center;gap:6px;border:1.5px dashed var(--border-s);border-radius:var(--r-md);padding:1.25rem 1rem;text-align:center;cursor:pointer;transition:border-color .15s;position:relative;}
+.drop:hover,.drop.dragover{border-color:var(--border-p);}
+.drop input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.drop-icon{width:30px;height:30px;border-radius:50%;background:var(--bg-secondary);display:flex;align-items:center;justify-content:center;}
+.drop-icon svg{width:14px;height:14px;stroke:var(--text-secondary);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.drop-label{font-size:13px;color:var(--text-secondary);}
+.drop-hint{font-size:11px;color:var(--text-tertiary);}
+.meta-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px;}
+.metric{background:var(--bg-secondary);border-radius:var(--r-md);padding:8px 10px;}
+.metric-label{font-size:11px;color:var(--text-secondary);margin-bottom:2px;}
+.metric-val{font-size:13px;font-weight:500;font-family:monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+.field{display:flex;flex-direction:column;gap:5px;}
+.field label{font-size:12px;color:var(--text-secondary);font-weight:500;}
+.field select,.field input[type=text]{font-family:inherit;font-size:13px;padding:7px 10px;border-radius:var(--r-md);border:0.5px solid var(--border-s);background:var(--bg-secondary);color:var(--text-primary);width:100%;}
+.field select:focus,.field input[type=text]:focus{outline:none;border-color:var(--border-p);}
+.field textarea{font-family:monospace;font-size:11px;padding:10px;border-radius:var(--r-md);border:0.5px solid var(--border-s);background:var(--bg-secondary);color:var(--text-primary);width:100%;resize:vertical;min-height:220px;line-height:1.65;}
+.field textarea:focus{outline:none;border-color:var(--border-p);}
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
+.seg-ctrl{display:flex;gap:0;border:0.5px solid var(--border-s);border-radius:var(--r-md);overflow:hidden;width:fit-content;}
+.seg-btn{font-family:inherit;font-size:12px;font-weight:500;padding:6px 18px;border:none;background:transparent;color:var(--text-secondary);cursor:pointer;transition:background .12s,color .12s;}
+.seg-btn:not(:last-child){border-right:0.5px solid var(--border-s);}
+.seg-btn.active{background:var(--text-primary);color:var(--bg-primary);}
+.seg-btn:hover:not(.active){background:var(--bg-secondary);}
+.xor-note{font-size:12px;color:var(--text-tertiary);margin-top:8px;padding:6px 10px;background:var(--bg-secondary);border-radius:var(--r-md);}
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;}
+.btn{font-family:inherit;font-size:13px;font-weight:500;padding:7px 16px;border-radius:var(--r-md);border:0.5px solid var(--border-s);background:transparent;color:var(--text-primary);cursor:pointer;transition:background .12s;white-space:nowrap;}
+.btn:hover:not(:disabled){background:var(--bg-secondary);}
+.btn:active:not(:disabled){transform:scale(0.98);}
+.btn:disabled{opacity:.35;cursor:default;}
+.btn-primary{background:var(--text-primary);color:var(--bg-primary);border-color:transparent;}
+.btn-primary:hover:not(:disabled){opacity:.88;background:var(--text-primary);}
+.status{font-size:13px;padding:7px 11px;border-radius:var(--r-md);margin-top:10px;background:var(--bg-secondary);color:var(--text-secondary);display:flex;align-items:flex-start;gap:6px;}
+.status.ok{background:var(--bg-success);color:var(--text-success);}
+.status.err{background:var(--bg-danger);color:var(--text-danger);}
+.status.warn{background:var(--bg-warn);color:var(--text-warn);}
+.dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;margin-top:4px;}
+.dl-meta{font-size:12px;color:var(--text-tertiary);margin-top:8px;}
+.mt{margin-top:10px;}
+.tabs{display:flex;gap:2px;margin-bottom:12px;border-bottom:0.5px solid var(--border-t);}
+.tab-btn{font-family:inherit;font-size:13px;font-weight:500;padding:8px 16px 10px;background:transparent;border:none;color:var(--text-secondary);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s;}
+.tab-btn:hover{color:var(--text-primary);}
+.tab-btn.active{color:var(--text-primary);border-bottom-color:var(--text-primary);}
+.tab-panel{display:none;}
+.tab-panel.active{display:block;}
+.preview-panel{border:0.5px solid var(--border-t);border-radius:var(--r-md);background:var(--bg-secondary);overflow:hidden;margin-top:16px;}
+.preview-tabs{display:flex;border-bottom:0.5px solid var(--border-t);background:var(--bg-primary);}
+.preview-tab{font-family:inherit;font-size:11px;font-weight:500;padding:6px 14px;border:none;background:transparent;color:var(--text-tertiary);cursor:pointer;border-bottom:2px solid transparent;transition:color .12s;}
+.preview-tab.active{color:var(--text-primary);border-bottom-color:var(--text-primary);}
+.preview-body{padding:12px;max-height:420px;overflow-y:auto;}
+.label-list{display:flex;flex-direction:column;gap:2px;}
+.label-item{border-radius:var(--r-md);overflow:hidden;border:0.5px solid var(--border-t);}
+.label-hdr{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg-primary);cursor:pointer;user-select:none;}
+.label-hdr:hover{background:var(--bg-secondary);}
+.label-idx{font-size:10px;color:var(--text-tertiary);font-family:monospace;min-width:28px;}
+.label-name{font-size:12px;font-weight:500;flex:1;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.label-caret{font-size:10px;color:var(--text-tertiary);transition:transform .15s;}
+.label-caret.open{transform:rotate(90deg);}
+.label-body{display:none;padding:8px 10px 10px;background:var(--bg-secondary);font-family:monospace;font-size:11px;line-height:1.6;white-space:pre-wrap;word-break:break-all;color:var(--text-secondary);border-top:0.5px solid var(--border-t);}
+.label-body.open{display:block;}
+.search-bar{display:flex;gap:6px;margin-bottom:10px;}
+.search-bar input{font-family:inherit;font-size:12px;padding:6px 10px;border-radius:var(--r-md);border:0.5px solid var(--border-s);background:var(--bg-primary);color:var(--text-primary);flex:1;}
+.search-bar input:focus{outline:none;border-color:var(--border-p);}
+.preview-stats{font-size:11px;color:var(--text-tertiary);margin-bottom:8px;}
+.raw-view{font-family:monospace;font-size:11px;line-height:1.65;white-space:pre-wrap;word-break:break-all;color:var(--text-secondary);}
+.empty-note{font-size:13px;color:var(--text-tertiary);text-align:center;padding:2rem 0;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>user.2.lang Converter</h1>
+  <p class="sub">Ace Attorney Trilogy — GS5 &amp; GS6 · Decode, encode, and convert to GMD</p>
+
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('decode')">Decode</button>
+    <button class="tab-btn" onclick="switchTab('encode')">Encode</button>
+    <button class="tab-btn" onclick="switchTab('togmd')">user.2 → GMD</button>
+  </div>
+
+  <!-- ═══ DECODE ═══ -->
+  <div id="tab-decode" class="tab-panel active">
+    <div class="card">
+      <div class="card-title">Input file</div>
+      <label class="drop" id="drop-decode">
+        <div class="drop-icon"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+        <span class="drop-label" id="dec-drop-text">Click or drop a user.2.lang file</span>
+        <span class="drop-hint">user.2.en · user.2.ja · user.2.fr · etc.</span>
+        <input type="file" id="dec-file-input">
+      </label>
+      <div class="meta-grid" id="dec-meta" style="display:none"></div>
+    </div>
+    <div class="card">
+      <div class="card-title">Convert</div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btn-decode" disabled onclick="runDecode()">Decode → .txt</button>
+      </div>
+      <div class="status" id="dec-status" style="display:none"><span class="dot"></span><span id="dec-status-text"></span></div>
+    </div>
+    <div class="card" id="dec-out-card" style="display:none">
+      <div class="card-title">Output</div>
+      <div class="field">
+        <label>Decoded text (editable before download)</label>
+        <textarea id="dec-preview" spellcheck="false"></textarea>
+      </div>
+      <div class="btn-row mt">
+        <button class="btn btn-primary" onclick="dlDecoded()">Download .txt</button>
+      </div>
+      <div class="dl-meta" id="dec-dl-meta"></div>
+      <div class="preview-panel">
+        <div class="preview-tabs">
+          <button class="preview-tab active" onclick="switchDecPreview('labels')">Labels</button>
+          <button class="preview-tab" onclick="switchDecPreview('raw')">Raw</button>
+        </div>
+        <div class="preview-body">
+          <div id="dec-prev-labels"><div class="empty-note">Run decode to see preview.</div></div>
+          <div id="dec-prev-raw" style="display:none"><div class="empty-note">Run decode to see preview.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ═══ ENCODE ═══ -->
+  <div id="tab-encode" class="tab-panel">
+    <div class="card">
+      <div class="card-title">Input .txt file <span class="card-title-right">Previously decoded by this tool</span></div>
+      <label class="drop" id="drop-encode">
+        <div class="drop-icon"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+        <span class="drop-label" id="enc-drop-text">Click or drop a decoded .txt file</span>
+        <span class="drop-hint">.txt decoded by this tool</span>
+        <input type="file" id="enc-file-input" accept=".txt,*">
+      </label>
+    </div>
+    <div class="card">
+      <div class="card-title">Output filename</div>
+      <div class="field">
+        <label>Filename (include full extension, e.g. user.2.en)</label>
+        <input type="text" id="enc-out-name" value="user.2.en" placeholder="user.2.en">
+      </div>
+    </div>
+    <div class="card">
+      <div class="card-title">Convert</div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btn-encode" disabled onclick="runEncode()">Encode → binary</button>
+      </div>
+      <div class="status" id="enc-status" style="display:none"><span class="dot"></span><span id="enc-status-text"></span></div>
+    </div>
+    <div class="card" id="enc-out-card" style="display:none">
+      <div class="card-title">Output</div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="dlEncoded()">Download binary</button>
+      </div>
+      <div class="dl-meta" id="enc-dl-meta"></div>
+    </div>
+  </div>
+
+  <!-- ═══ USER.2 → GMD ═══ -->
+  <div id="tab-togmd" class="tab-panel">
+    <div class="card">
+      <div class="card-title">Input file</div>
+      <label class="drop" id="drop-togmd">
+        <div class="drop-icon"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+        <span class="drop-label" id="togmd-drop-text">Click or drop a user.2.lang file</span>
+        <span class="drop-hint">user.2.en · user.2.ja · user.2.fr · etc.</span>
+        <input type="file" id="togmd-file-input">
+      </label>
+      <div class="meta-grid" id="togmd-meta" style="display:none"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Target GMD version</div>
+      <div class="seg-ctrl">
+        <button class="seg-btn active" id="togmd-v1-btn" onclick="setTogmdVer(1)">GMD V1 · GS5</button>
+        <button class="seg-btn" id="togmd-v2-btn" onclick="setTogmdVer(2)">GMD V2 · GS6</button>
+      </div>
+      <div class="xor-note" id="togmd-xor-note">V1 (GS5 / Dual Destinies) — XOR encryption will be applied.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">GMD metadata <span class="card-title-right">Required to build a valid GMD</span></div>
+      <div class="grid2">
+        <div class="field">
+          <label>Language</label>
+          <select id="togmd-lang">
+            <option value="English">English</option>
+            <option value="Japanese">Japanese</option>
+            <option value="French">French</option>
+            <option value="Spanish">Spanish</option>
+            <option value="German">German</option>
+            <option value="Italian">Italian</option>
+          </select>
+        </div>
+        <div class="field">
+          <label>GMD internal filename</label>
+          <input type="text" id="togmd-gmd-name" placeholder="e.g. scr_save_select" value="">
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Pipeline <span class="card-title-right">user.2 binary → labels → GMD binary</span></div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btn-togmd" disabled onclick="runToGmd()">Convert user.2 → GMD</button>
+      </div>
+      <div class="status" id="togmd-status" style="display:none"><span class="dot"></span><span id="togmd-status-text"></span></div>
+    </div>
+
+    <div class="card" id="togmd-out-card" style="display:none">
+      <div class="card-title">Output</div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="dlTogmd()">Download .gmd</button>
+      </div>
+      <div class="dl-meta" id="togmd-dl-meta"></div>
+      <div class="preview-panel">
+        <div class="preview-tabs">
+          <button class="preview-tab active" onclick="switchTogmdPreview('labels')">Labels</button>
+          <button class="preview-tab" onclick="switchTogmdPreview('raw')">Raw</button>
+        </div>
+        <div class="preview-body">
+          <div id="togmd-prev-labels"><div class="empty-note">Run conversion to see preview.</div></div>
+          <div id="togmd-prev-raw" style="display:none"><div class="empty-note">Run conversion to see preview.</div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script>
+// ─────────────────────────────────────────────────────────────────────────────
+// UI HELPERS
+// ─────────────────────────────────────────────────────────────────────────────
+const TABS = ['decode','encode','togmd'];
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', TABS[i]===name));
+  TABS.forEach(n => document.getElementById('tab-'+n).classList.toggle('active', n===name));
+}
+function setStatus(id, msg, cls) {
+  const el = document.getElementById(id);
+  el.className = 'status '+(cls||'');
+  el.style.display = 'flex';
+  el.querySelector('span:last-child').textContent = msg;
+}
+function setMeta(gridId, pairs) {
+  const g = document.getElementById(gridId);
+  g.innerHTML = pairs.map(([l,v])=>`<div class="metric"><div class="metric-label">${l}</div><div class="metric-val" title="${v}">${v}</div></div>`).join('');
+  g.style.display = 'grid';
+}
+function formatBytes(b){
+  if(b<1024)return b+' B';
+  if(b<1048576)return(b/1024).toFixed(1)+' KB';
+  return(b/1048576).toFixed(2)+' MB';
+}
+function baseName(n){ return n.replace(/(\.[^.]+)+$/,''); }
+function setupDrop(dropId, inputId, onFile){
+  const zone=document.getElementById(dropId), input=document.getElementById(inputId);
+  zone.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('dragover');});
+  zone.addEventListener('dragleave',()=>zone.classList.remove('dragover'));
+  zone.addEventListener('drop',e=>{e.preventDefault();zone.classList.remove('dragover');const f=e.dataTransfer.files[0];if(f)onFile(f);});
+  input.addEventListener('change',()=>{const f=input.files[0];if(f)onFile(f);});
+}
+function dlBlob(blob,name){
+  const url=URL.createObjectURL(blob),a=document.createElement('a');
+  a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),3000);
+}
+function readAB(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.onerror=rej;r.readAsArrayBuffer(f);});}
+function readTxt(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.onerror=rej;r.readAsText(f,'utf-8');});}
+function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// BINARY CONSTANTS & HELPERS
+// ─────────────────────────────────────────────────────────────────────────────
+const USRHDR_SIZE = 48;
+const CLASS_GS56  = [0x83f3f042,0x0b263156];
+const CLASS_NAME  = [0xee933aa7,0x1aa1a4ac];
+function roundUp(x,l){return Math.ceil(x/l)*l;}
+
+class Writer{
+  constructor(){this.chunks=[];this.size=0;}
+  write(d){const a=d instanceof Uint8Array?d:new Uint8Array(d);this.chunks.push(a);this.size+=a.length;}
+  u8(v){this.write([v]);}
+  u32(v,le=true){const b=new ArrayBuffer(4);new DataView(b).setUint32(0,v>>>0,le);this.write(new Uint8Array(b));}
+  str(s){this.write(new TextEncoder().encode(s));}
+  pad(n){if(this.size%n!==0)this.write(new Uint8Array(n-this.size%n));}
+  toU8(){const out=new Uint8Array(this.size);let off=0;for(const c of this.chunks){out.set(c,off);off+=c.length;}return out;}
+}
+
+function encUTF16(str){
+  const buf=new Uint8Array(str.length*2),v=new DataView(buf.buffer);
+  for(let i=0;i<str.length;i++)v.setUint16(i*2,str.charCodeAt(i),true);
+  return buf;
+}
+function decUTF16(u8,charCount){
+  const out=[];
+  for(let i=0;i<charCount-1;i++)out.push(String.fromCharCode(u8[i*2]|(u8[i*2+1]<<8)));
+  return out.join('');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DECODE: user.2.lang binary → {name, labels:[label,text][]}
+// Matches gs456scr.py read_gs56() logic
+// ─────────────────────────────────────────────────────────────────────────────
+function decodeUser2(buf){
+  const u8=new Uint8Array(buf),dv=new DataView(buf);
+  let p=0;
+  function assert(c,m){if(!c)throw new Error(m||'assert failed');}
+  function u32(){const v=dv.getUint32(p,true);p+=4;return v;}
+  function align(n){p=roundUp(p,n);}
+
+  assert(u8[0]===85&&u8[1]===83&&u8[2]===82&&u8[3]===0,'Not a USR file — bad magic');
+  p=4;
+  assert(u32()===0&&u32()===0&&u32()===0,'USR counts must be 0');
+  for(let i=0;i<3;i++){const lo=u32(),hi=u32();assert(lo===USRHDR_SIZE&&hi===0,`USR offset ${i} must be ${USRHDR_SIZE}`);}
+  align(16);
+  assert(p===USRHDR_SIZE,'USR header size mismatch');
+
+  assert(u8[p]===82&&u8[p+1]===83&&u8[p+2]===90&&u8[p+3]===0,'RSZ magic not found');
+  p+=4;
+  assert(u32()===16,'RSZ version must be 16');
+  assert(u32()===1,'RSZ object count must be 1');
+  const instanceCount=u32()-1;
+  assert(u32()===0&&u32()===0,'RSZ reserved must be 0');
+
+  /* instance_offset */ u32();u32();
+  const dataOffLo=u32();u32();
+  /* userdata_offset */ u32();u32();
+
+  assert(u32()===instanceCount,'object table count mismatch');
+
+  const rsz_base=USRHDR_SIZE;
+
+  // null entry
+  assert(u32()===0&&u32()===0,'null entry must be 0,0');
+
+  let verified=false;
+  for(let i=0;i<instanceCount;i++){
+    const tid=u32(),crc=u32();
+    if(tid===CLASS_GS56[0]&&crc===CLASS_GS56[1]){assert(i<instanceCount-1,'GS56 class at wrong slot');verified=true;}
+    else if(tid===CLASS_NAME[0]&&crc===CLASS_NAME[1]){assert(i===instanceCount-1,'NAME class must be last');verified=true;}
+    else throw new Error(`Unknown class at index ${i}: 0x${tid.toString(16)} 0x${crc.toString(16)}`);
+  }
+  assert(verified,'Not a GS5/GS6 user.2 file');
+
+  p=rsz_base+dataOffLo;
+  const data={name:'',labels:[]};
+
+  for(let i=0;i<instanceCount-1;i++){
+    const lsz=u32();
+    const label=decUTF16(u8.subarray(p,p+lsz*2),lsz);
+    p+=lsz*2; p=roundUp(p,4);
+    const tsz=u32();
+    const text=decUTF16(u8.subarray(p,p+tsz*2),tsz);
+    p+=tsz*2; p=roundUp(p,4);
+    data.labels.push([label,text]);
+  }
+  const nsz=u32();
+  data.name=decUTF16(u8.subarray(p,p+nsz*2),nsz);
+  return data;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ENCODE: {name, labels} → user.2.lang binary
+// Matches gs456scr.py write_gs56() logic
+// ─────────────────────────────────────────────────────────────────────────────
+function encodeUser2(data){
+  const labels=data.labels;
+  const instanceCount=labels.length+1;
+  const ds=new Writer();
+
+  for(const[label,text]of labels){
+    ds.u32(label.length+1);
+    ds.write(encUTF16(label));
+    ds.write(new Uint8Array(2)); // null terminator
+    ds.pad(4);
+    ds.u32(text.length+1);
+    ds.write(encUTF16(text));
+    ds.write(new Uint8Array(2));
+    ds.pad(4);
+  }
+  ds.u32(data.name.length+1);
+  ds.write(encUTF16(data.name));
+  ds.write(new Uint8Array(2));
+  ds.pad(4);
+  ds.u32(instanceCount-1);
+  for(let i=0;i<instanceCount-1;i++)ds.u32(i+1);
+
+  const dataBytes=ds.toU8();
+  const rszFixed=52;
+  const dataOffset=roundUp(rszFixed+8+instanceCount*8,16);
+
+  const rsz=new Writer();
+  rsz.write([82,83,90,0]);
+  rsz.u32(16);rsz.u32(1);rsz.u32(instanceCount+1);
+  rsz.u32(0);rsz.u32(0);
+  rsz.u32(rszFixed);rsz.u32(0);
+  rsz.u32(dataOffset);rsz.u32(0);
+  rsz.u32(dataOffset);rsz.u32(0);
+  rsz.u32(instanceCount);
+  rsz.u32(0);rsz.u32(0);
+  for(let i=0;i<instanceCount-1;i++){rsz.u32(CLASS_GS56[0]);rsz.u32(CLASS_GS56[1]);}
+  rsz.u32(CLASS_NAME[0]);rsz.u32(CLASS_NAME[1]);
+  if(rsz.size<dataOffset)rsz.write(new Uint8Array(dataOffset-rsz.size));
+  rsz.write(dataBytes);
+
+  const usr=new Writer();
+  usr.write([85,83,82,0]);
+  usr.u32(0);usr.u32(0);usr.u32(0);
+  for(let i=0;i<3;i++){usr.u32(USRHDR_SIZE);usr.u32(0);}
+  usr.pad(16);
+  usr.write(rsz.toU8());
+  return usr.toU8();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// TEXT format for .txt round-trip
+// ─────────────────────────────────────────────────────────────────────────────
+function dataToText(data){
+  const lines=['[name]',data.name,''];
+  for(let i=0;i<data.labels.length;i++){
+    const[label,text]=data.labels[i];
+    lines.push(`[label ${i}]`,label,`[text ${i}]`,text,`[end ${i}]`,'');
+  }
+  return lines.join('\n');
+}
+function textToData(txt){
+  const lines=txt.split('\n');
+  const data={name:'',labels:[]};
+  let i=0;
+  while(i<lines.length&&lines[i].trim()!=='[name]')i++;
+  i++;
+  if(i<lines.length)data.name=lines[i++];
+  while(i<lines.length){
+    const lm=lines[i].trim().match(/^\[label (\d+)\]$/);
+    if(lm){
+      i++;
+      const labelLine=i<lines.length?lines[i++]:'';
+      if(i<lines.length&&lines[i].trim().match(/^\[text \d+\]$/))i++;
+      const endTag=`[end ${lm[1]}]`;
+      const textLines=[];
+      while(i<lines.length&&lines[i].trim()!==endTag)textLines.push(lines[i++]);
+      if(i<lines.length)i++;
+      data.labels.push([labelLine,textLines.join('\n')]);
+    } else i++;
+  }
+  return data;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GMD HELPERS (your full GMD encoder from the GMD converter tool)
+// ─────────────────────────────────────────────────────────────────────────────
+const VER_FROM={66049:1,66306:2};
+const VER_TO={1:66049,2:66306};
+const LANG_FROM={0:'Japanese',1:'English',2:'French',3:'Spanish',4:'German',5:'Italian'};
+const LANG_TO={Japanese:0,English:1,French:2,Spanish:3,German:4,Italian:5};
+
+function replaceFullwidth(s){return s.replace(/[\uFF00-\uFFEF]/g,'###');}
+
+function crc32(s){
+  const CRC32T=(()=>{const t=new Uint32Array(256);for(let i=0;i<256;i++){let c=i;for(let j=0;j<8;j++)c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1);t[i]=c;}return t;})();
+  const e=new TextEncoder().encode(s);let c=0xFFFFFFFF;
+  for(const b of e)c=CRC32T[(c^b)&0xFF]^(c>>>8);
+  return(c^0xFFFFFFFF)>>>0;
+}
+function calcHash(label){return[(~crc32(label+label))>>>0,(~crc32(label+label+label))>>>0];}
+
+function xorCipher(data,ver=1){
+  const k1=ver===1?"fjfajfahajra;tira9tgujagjjgajgoa":"e43bcc7fcab+a6c4ed22fcd433/9d2e6cb053fa462-463f3a446b19";
+  const k2=ver===1?"mva;eignhpe/dfkfjgp295jtugkpejfu":"861f1dca05a0;9ddd5261e5dcc@6b438e6c.8ba7d71c*4fd11f3af1";
+  const out=new Uint8Array(data.length);
+  for(let i=0;i<data.length;i++)out[i]=data[i]^k1.charCodeAt(i%k1.length)^k2.charCodeAt(i%k2.length);
+  return out;
+}
+
+// Build a GMD binary from label/text pairs + metadata
+// version: 1 = GS5 (XOR encrypted), 2 = GS6 (plain)
+function buildGmd(labels, gmdName, language, version){
+  const enc=new TextEncoder();
+  const labelNames=labels.map(([l])=>l);
+  const texts=labels.map(([,t])=>t);
+
+  // section content: each text + \0, joined
+  let contentBytes=new Uint8Array(0);
+  for(const text of texts){
+    const fixed=(text+'\x00').replace(/\n/g,'\r\n');
+    const b=enc.encode(fixed);
+    const m=new Uint8Array(contentBytes.length+b.length);
+    m.set(contentBytes);m.set(b,contentBytes.length);
+    contentBytes=m;
+  }
+
+  const labelCount=labelNames.length;
+  const sectionCount=labelCount;
+  const langInt=LANG_TO[language]??1;
+  const versionInt=VER_TO[version]||version;
+  const xorEnc=(version===1);
+
+  // label sizes & offsets
+  const labelStr=labelNames.join('\x00')+'\x00';
+  const labelSizeCalc=labelCount<1?0:replaceFullwidth(labelStr).length;
+  const sectionSizeCalc=contentBytes.length;
+
+  const w=new Writer();
+  w.write([71,77,68,0]); // GMD\0
+  w.u32(versionInt);w.u32(langInt);w.u32(0);w.u32(0);
+  w.u32(labelCount);w.u32(sectionCount);
+  w.u32(labelSizeCalc);w.u32(sectionSizeCalc);w.u32(gmdName.length);
+  w.str(gmdName);w.u8(0);
+
+  if(version===1){
+    // V1: pairs of [index, label_offset]
+    let curOff=0;
+    for(let i=0;i<labelCount;i++){
+      w.u32(i);w.u32(curOff);
+      curOff+=replaceFullwidth(labelNames[i]).length+1;
+    }
+  } else {
+    // V2: triples of [hash1, hash2, label_offset] + labelRef2 + hash table
+    const offsets={};
+    let curOff=0;
+    for(let i=0;i<labelCount;i++){
+      const[h1,h2]=calcHash(labelNames[i]);
+      offsets[i]=[h1,h2,curOff];
+      curOff+=replaceFullwidth(labelNames[i]).length+1;
+    }
+    for(let i=0;i<labelCount;i++){
+      const[h1,h2,off]=offsets[i];
+      w.u32(h1);w.u32(h2);w.u32(off);
+      w.u32(0);w.u32(0); // labelRef1, labelRef2 placeholders
+    }
+    // 1024-byte hash table (empty — zeros)
+    w.write(new Uint8Array(1024));
+  }
+
+  for(const n of labelNames){w.str(n);w.u8(0);}
+  w.write(xorEnc?xorCipher(contentBytes,1):contentBytes);
+  return w.toU8();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PREVIEW HELPERS
+// ─────────────────────────────────────────────────────────────────────────────
+let decPreviewData=null, togmdPreviewData=null;
+
+function renderLabelPreview(containerId, statsId, listId, labels, filter){
+  const list=document.getElementById(listId);
+  const stats=document.getElementById(statsId);
+  if(!list)return;
+  const q=filter.toLowerCase();
+  const filtered=labels.filter(([name,text])=>!q||name.toLowerCase().includes(q)||text.toLowerCase().includes(q));
+  if(stats)stats.textContent=filter?`${filtered.length} of ${labels.length} labels`:`${labels.length} labels`;
+  list.innerHTML=filtered.map(([name,text],i)=>{
+    const hasText=text.trim().length>0;
+    return`<div class="label-item">
+      <div class="label-hdr" onclick="toggleLabel(this)">
+        <span class="label-idx">#${i}</span>
+        <span class="label-name">${escHtml(name)}</span>
+        <span class="label-caret" style="${hasText?'':'opacity:.3'}">&#9658;</span>
+      </div>
+      ${hasText?`<div class="label-body">${escHtml(text)}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function initPreview(labelsElId, rawElId, data, rawText){
+  const labelsEl=document.getElementById(labelsElId);
+  const rawEl=document.getElementById(rawElId);
+  if(!data.labels.length){labelsEl.innerHTML='<div class="empty-note">No labels found.</div>';return;}
+  labelsEl.innerHTML=`
+    <div class="search-bar"><input type="text" placeholder="Filter labels…" oninput="filterLabels('${labelsElId}',this.value)"></div>
+    <div class="preview-stats" id="${labelsElId}-stats">${data.labels.length} labels</div>
+    <div class="label-list" id="${labelsElId}-list"></div>`;
+  renderLabelPreview(labelsElId, labelsElId+'-stats', labelsElId+'-list', data.labels, '');
+  if(rawEl)rawEl.innerHTML=`<div class="raw-view">${escHtml(rawText)}</div>`;
+}
+
+function filterLabels(containerId, q){
+  const data=containerId.startsWith('dec')?decPreviewData:togmdPreviewData;
+  if(data)renderLabelPreview(containerId,containerId+'-stats',containerId+'-list',data.labels,q);
+}
+
+function toggleLabel(hdr){
+  const body=hdr.nextElementSibling;if(!body)return;
+  const caret=hdr.querySelector('.label-caret');
+  const open=body.classList.toggle('open');
+  if(caret)caret.classList.toggle('open',open);
+}
+
+function switchDecPreview(name){
+  document.querySelectorAll('#dec-out-card .preview-tab').forEach((b,i)=>b.classList.toggle('active',['labels','raw'][i]===name));
+  document.getElementById('dec-prev-labels').style.display=name==='labels'?'':'none';
+  document.getElementById('dec-prev-raw').style.display=name==='raw'?'':'none';
+}
+function switchTogmdPreview(name){
+  document.querySelectorAll('#togmd-out-card .preview-tab').forEach((b,i)=>b.classList.toggle('active',['labels','raw'][i]===name));
+  document.getElementById('togmd-prev-labels').style.display=name==='labels'?'':'none';
+  document.getElementById('togmd-prev-raw').style.display=name==='raw'?'':'none';
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// STATE
+// ─────────────────────────────────────────────────────────────────────────────
+let decFileBuf=null,decFileName='';
+let encFileText=null,encFileName='';
+let encOutBytes=null;
+let togmdFileBuf=null,togmdFileName='';
+let togmdOutBytes=null,togmdOutName='';
+let togmdTargetVer=1;
+
+// ─────────────────────────────────────────────────────────────────────────────
+// DECODE TAB
+// ─────────────────────────────────────────────────────────────────────────────
+setupDrop('drop-decode','dec-file-input',async f=>{
+  decFileName=f.name;
+  document.getElementById('dec-drop-text').textContent=f.name;
+  document.getElementById('dec-out-card').style.display='none';
+  document.getElementById('dec-status').style.display='none';
+  decFileBuf=await readAB(f);
+  try{
+    const data=decodeUser2(decFileBuf);
+    setMeta('dec-meta',[['Labels',String(data.labels.length)],['Name',data.name||'—'],['Size',formatBytes(f.size)]]);
+    setStatus('dec-status',`Loaded · ${data.labels.length} labels · ${formatBytes(f.size)}`,'ok');
+  } catch(e){
+    setMeta('dec-meta',[['File',f.name],['Size',formatBytes(f.size)]]);
+    setStatus('dec-status','Loaded (parse preview failed: '+e.message+')','warn');
+  }
+  document.getElementById('btn-decode').disabled=false;
+});
+
+async function runDecode(){
+  if(!decFileBuf){setStatus('dec-status','No file loaded','err');return;}
+  setStatus('dec-status','Decoding…','');
+  try{
+    const data=decodeUser2(decFileBuf);
+    const txt=dataToText(data);
+    document.getElementById('dec-preview').value=txt;
+    document.getElementById('dec-dl-meta').textContent=baseName(decFileName)+'.txt · '+formatBytes(new Blob([txt]).size);
+    document.getElementById('dec-out-card').style.display='';
+    decPreviewData=data;
+    initPreview('dec-prev-labels','dec-prev-raw',data,txt);
+    setStatus('dec-status',`Decoded · ${data.labels.length} labels`,'ok');
+  } catch(e){setStatus('dec-status','Error: '+e.message,'err');console.error(e);}
+}
+
+function dlDecoded(){
+  const txt=document.getElementById('dec-preview').value;
+  dlBlob(new Blob([txt],{type:'text/plain'}),baseName(decFileName)+'.txt');
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// ENCODE TAB
+// ─────────────────────────────────────────────────────────────────────────────
+setupDrop('drop-encode','enc-file-input',async f=>{
+  encFileName=f.name;
+  document.getElementById('enc-drop-text').textContent=f.name;
+  document.getElementById('enc-out-card').style.display='none';
+  document.getElementById('enc-status').style.display='none';
+  encFileText=await readTxt(f);
+  setStatus('enc-status','Loaded '+f.name+' · '+formatBytes(f.size),'ok');
+  document.getElementById('btn-encode').disabled=false;
+});
+
+async function runEncode(){
+  if(!encFileText){setStatus('enc-status','No file loaded','err');return;}
+  setStatus('enc-status','Encoding…','');
+  try{
+    const data=textToData(encFileText);
+    encOutBytes=encodeUser2(data);
+    const outName=document.getElementById('enc-out-name').value||'user.2.en';
+    document.getElementById('enc-dl-meta').textContent=outName+' · '+formatBytes(encOutBytes.length);
+    document.getElementById('enc-out-card').style.display='';
+    setStatus('enc-status',`Encoded · ${data.labels.length} labels → ${outName}`,'ok');
+  } catch(e){setStatus('enc-status','Error: '+e.message,'err');console.error(e);}
+}
+
+function dlEncoded(){
+  if(!encOutBytes)return;
+  const outName=document.getElementById('enc-out-name').value||'user.2.en';
+  dlBlob(new Blob([encOutBytes],{type:'application/octet-stream'}),outName);
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// USER.2 → GMD TAB
+// ─────────────────────────────────────────────────────────────────────────────
+function setTogmdVer(v){
+  togmdTargetVer=v;
+  document.getElementById('togmd-v1-btn').classList.toggle('active',v===1);
+  document.getElementById('togmd-v2-btn').classList.toggle('active',v===2);
+  document.getElementById('togmd-xor-note').textContent=v===1
+    ?'V1 (GS5 / Dual Destinies) — XOR encryption will be applied.'
+    :'V2 (GS6 / Spirit of Justice) — no XOR encryption applied.';
+}
+
+setupDrop('drop-togmd','togmd-file-input',async f=>{
+  togmdFileName=f.name;
+  document.getElementById('togmd-drop-text').textContent=f.name;
+  document.getElementById('togmd-out-card').style.display='none';
+  document.getElementById('togmd-status').style.display='none';
+  togmdFileBuf=await readAB(f);
+  // auto-fill GMD name from filename
+  const base=baseName(f.name);
+  if(!document.getElementById('togmd-gmd-name').value)
+    document.getElementById('togmd-gmd-name').value=base;
+  try{
+    const data=decodeUser2(togmdFileBuf);
+    setMeta('togmd-meta',[['Labels',String(data.labels.length)],['Name',data.name||'—'],['Size',formatBytes(f.size)]]);
+    setStatus('togmd-status',`Loaded · ${data.labels.length} labels · ${formatBytes(f.size)}`,'ok');
+  } catch(e){
+    setMeta('togmd-meta',[['File',f.name],['Size',formatBytes(f.size)]]);
+    setStatus('togmd-status','Loaded (parse preview failed: '+e.message+')','warn');
+  }
+  document.getElementById('btn-togmd').disabled=false;
+});
+
+async function runToGmd(){
+  if(!togmdFileBuf){setStatus('togmd-status','No file loaded','err');return;}
+  setStatus('togmd-status','Stage 1/2: Reading user.2 binary…','');
+  try{
+    const data=decodeUser2(togmdFileBuf);
+    const gmdName=document.getElementById('togmd-gmd-name').value.trim()||baseName(togmdFileName);
+    const language=document.getElementById('togmd-lang').value;
+    const version=togmdTargetVer;
+
+    setStatus('togmd-status','Stage 2/2: Building GMD binary…','');
+    togmdOutBytes=buildGmd(data.labels,gmdName,language,version);
+    togmdOutName=gmdName+'.gmd';
+
+    const xorNote=version===1?' · XOR encrypted':'';
+    document.getElementById('togmd-dl-meta').textContent=togmdOutName+' · GMD V'+version+' · '+formatBytes(togmdOutBytes.length)+xorNote;
+    document.getElementById('togmd-out-card').style.display='';
+
+    togmdPreviewData=data;
+    const rawText=data.labels.map(([l,t],i)=>`[${i}] ${l}\n${t}`).join('\n\n');
+    initPreview('togmd-prev-labels','togmd-prev-raw',data,rawText);
+
+    setStatus('togmd-status',`Done · ${data.labels.length} labels · GMD V${version} · ${togmdOutName}`,'ok');
+  } catch(e){setStatus('togmd-status','Error: '+e.message,'err');console.error(e);}
+}
+
+function dlTogmd(){
+  if(!togmdOutBytes)return;
+  dlBlob(new Blob([togmdOutBytes],{type:'application/octet-stream'}),togmdOutName||'output.gmd');
+}
+</script>
+</body>
+</html>
