@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title> User 2 Converter</title>
+<title>user.2 Converter</title>
 <style>
 *{box-sizing:border-box;margin:0;padding:0;}
 :root{
@@ -22,7 +22,7 @@
   }
 }
 body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:var(--text-primary);background:var(--bg-secondary);min-height:100vh;}
-.wrap{max-width:680px;margin:0 auto;padding:2rem 1rem 4rem;}
+.wrap{max-width:700px;margin:0 auto;padding:2rem 1rem 4rem;}
 h1{font-size:22px;font-weight:500;margin-bottom:4px;}
 .sub{font-size:13px;color:var(--text-secondary);margin-bottom:20px;}
 .card{background:var(--bg-primary);border:0.5px solid var(--border-t);border-radius:var(--r-lg);padding:1rem 1.25rem;margin-bottom:12px;}
@@ -46,7 +46,7 @@ h1{font-size:22px;font-weight:500;margin-bottom:4px;}
 .field textarea{font-family:monospace;font-size:11px;padding:10px;border-radius:var(--r-md);border:0.5px solid var(--border-s);background:var(--bg-secondary);color:var(--text-primary);width:100%;resize:vertical;min-height:220px;line-height:1.65;}
 .field textarea:focus{outline:none;border-color:var(--border-p);}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
-.seg-ctrl{display:flex;gap:0;border:0.5px solid var(--border-s);border-radius:var(--r-md);overflow:hidden;width:fit-content;}
+.seg-ctrl{display:flex;border:0.5px solid var(--border-s);border-radius:var(--r-md);overflow:hidden;width:fit-content;}
 .seg-btn{font-family:inherit;font-size:12px;font-weight:500;padding:6px 18px;border:none;background:transparent;color:var(--text-secondary);cursor:pointer;transition:background .12s,color .12s;}
 .seg-btn:not(:last-child){border-right:0.5px solid var(--border-s);}
 .seg-btn.active{background:var(--text-primary);color:var(--bg-primary);}
@@ -72,7 +72,7 @@ h1{font-size:22px;font-weight:500;margin-bottom:4px;}
 .tab-btn.active{color:var(--text-primary);border-bottom-color:var(--text-primary);}
 .tab-panel{display:none;}
 .tab-panel.active{display:block;}
-.preview-panel{border:0.5px solid var(--border-t);border-radius:var(--r-md);background:var(--bg-secondary);overflow:hidden;margin-top:16px;}
+.preview-panel{border:0.5px solid var(--border-t);border-radius:var(--r-md);background:var(--bg-secondary);overflow:hidden;margin-top:14px;}
 .preview-tabs{display:flex;border-bottom:0.5px solid var(--border-t);background:var(--bg-primary);}
 .preview-tab{font-family:inherit;font-size:11px;font-weight:500;padding:6px 14px;border:none;background:transparent;color:var(--text-tertiary);cursor:pointer;border-bottom:2px solid transparent;transition:color .12s;}
 .preview-tab.active{color:var(--text-primary);border-bottom-color:var(--text-primary);}
@@ -98,7 +98,7 @@ h1{font-size:22px;font-weight:500;margin-bottom:4px;}
 <body>
 <div class="wrap">
   <h1>user.2.lang Converter</h1>
-  <p class="sub">Ace Attorney Trilogy — GS5 &amp; GS6 · Decode, encode, and convert to GMD</p>
+  <p class="sub">Ace Attorney Trilogy — GS5 (DD) &amp; GS6 (SoJ) · Based on <a href="https://gist.github.com/osyu/5bb86d49153edef5415a7aba09a48ca1" style="color:inherit" target="_blank">gs456scr.py</a> by osyu</p>
 
   <div class="tabs">
     <button class="tab-btn active" onclick="switchTab('decode')">Decode</button>
@@ -106,7 +106,7 @@ h1{font-size:22px;font-weight:500;margin-bottom:4px;}
     <button class="tab-btn" onclick="switchTab('togmd')">user.2 → GMD</button>
   </div>
 
-  <!-- ═══ DECODE ═══ -->
+  <!-- DECODE -->
   <div id="tab-decode" class="tab-panel active">
     <div class="card">
       <div class="card-title">Input file</div>
@@ -119,26 +119,26 @@ h1{font-size:22px;font-weight:500;margin-bottom:4px;}
       <div class="meta-grid" id="dec-meta" style="display:none"></div>
     </div>
     <div class="card">
-      <div class="card-title">Convert</div>
+      <div class="card-title">Convert <span class="card-title-right">Outputs .json matching gs456scr.py format</span></div>
       <div class="btn-row">
-        <button class="btn btn-primary" id="btn-decode" disabled onclick="runDecode()">Decode → .txt</button>
+        <button class="btn btn-primary" id="btn-decode" disabled onclick="runDecode()">Decode → .json</button>
       </div>
       <div class="status" id="dec-status" style="display:none"><span class="dot"></span><span id="dec-status-text"></span></div>
     </div>
     <div class="card" id="dec-out-card" style="display:none">
       <div class="card-title">Output</div>
       <div class="field">
-        <label>Decoded text (editable before download)</label>
+        <label>Decoded JSON (editable before download)</label>
         <textarea id="dec-preview" spellcheck="false"></textarea>
       </div>
       <div class="btn-row mt">
-        <button class="btn btn-primary" onclick="dlDecoded()">Download .txt</button>
+        <button class="btn btn-primary" onclick="dlDecoded()">Download .json</button>
       </div>
       <div class="dl-meta" id="dec-dl-meta"></div>
       <div class="preview-panel">
         <div class="preview-tabs">
           <button class="preview-tab active" onclick="switchDecPreview('labels')">Labels</button>
-          <button class="preview-tab" onclick="switchDecPreview('raw')">Raw</button>
+          <button class="preview-tab" onclick="switchDecPreview('raw')">Raw JSON</button>
         </div>
         <div class="preview-body">
           <div id="dec-prev-labels"><div class="empty-note">Run decode to see preview.</div></div>
@@ -148,15 +148,15 @@ h1{font-size:22px;font-weight:500;margin-bottom:4px;}
     </div>
   </div>
 
-  <!-- ═══ ENCODE ═══ -->
+  <!-- ENCODE -->
   <div id="tab-encode" class="tab-panel">
     <div class="card">
-      <div class="card-title">Input .txt file <span class="card-title-right">Previously decoded by this tool</span></div>
+      <div class="card-title">Input .json file <span class="card-title-right">Decoded by this tool or gs456scr.py</span></div>
       <label class="drop" id="drop-encode">
         <div class="drop-icon"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
-        <span class="drop-label" id="enc-drop-text">Click or drop a decoded .txt file</span>
-        <span class="drop-hint">.txt decoded by this tool</span>
-        <input type="file" id="enc-file-input" accept=".txt,*">
+        <span class="drop-label" id="enc-drop-text">Click or drop a decoded .json file</span>
+        <span class="drop-hint">{ "name": "...", "labels": [["label", "text"], ...] }</span>
+        <input type="file" id="enc-file-input" accept=".json,*">
       </label>
     </div>
     <div class="card">
@@ -182,7 +182,7 @@ h1{font-size:22px;font-weight:500;margin-bottom:4px;}
     </div>
   </div>
 
-  <!-- ═══ USER.2 → GMD ═══ -->
+  <!-- USER.2 → GMD -->
   <div id="tab-togmd" class="tab-panel">
     <div class="card">
       <div class="card-title">Input file</div>
@@ -194,7 +194,6 @@ h1{font-size:22px;font-weight:500;margin-bottom:4px;}
       </label>
       <div class="meta-grid" id="togmd-meta" style="display:none"></div>
     </div>
-
     <div class="card">
       <div class="card-title">Target GMD version</div>
       <div class="seg-ctrl">
@@ -203,7 +202,13 @@ h1{font-size:22px;font-weight:500;margin-bottom:4px;}
       </div>
       <div class="xor-note" id="togmd-xor-note">V1 (GS5 / Dual Destinies) — XOR encryption will be applied.</div>
     </div>
-
+    <div class="card">
+      <div class="card-title">Game <span class="card-title-right">Sets opcode mapping for tag conversion</span></div>
+      <div class="seg-ctrl">
+        <button class="seg-btn active" id="togmd-dd-btn" onclick="setTogmdGame('dd')">Dual Destinies (DD)</button>
+        <button class="seg-btn" id="togmd-soj-btn" onclick="setTogmdGame('soj')">Spirit of Justice (SoJ)</button>
+      </div>
+    </div>
     <div class="card">
       <div class="card-title">GMD metadata <span class="card-title-right">Required to build a valid GMD</span></div>
       <div class="grid2">
@@ -224,7 +229,6 @@ h1{font-size:22px;font-weight:500;margin-bottom:4px;}
         </div>
       </div>
     </div>
-
     <div class="card">
       <div class="card-title">Pipeline <span class="card-title-right">user.2 binary → labels → GMD binary</span></div>
       <div class="btn-row">
@@ -232,7 +236,6 @@ h1{font-size:22px;font-weight:500;margin-bottom:4px;}
       </div>
       <div class="status" id="togmd-status" style="display:none"><span class="dot"></span><span id="togmd-status-text"></span></div>
     </div>
-
     <div class="card" id="togmd-out-card" style="display:none">
       <div class="card-title">Output</div>
       <div class="btn-row">
@@ -252,520 +255,609 @@ h1{font-size:22px;font-weight:500;margin-bottom:4px;}
     </div>
   </div>
 </div>
-
 <script>
-// ─────────────────────────────────────────────────────────────────────────────
-// UI HELPERS
-// ─────────────────────────────────────────────────────────────────────────────
-const TABS = ['decode','encode','togmd'];
-function switchTab(name) {
-  document.querySelectorAll('.tab-btn').forEach((b,i) => b.classList.toggle('active', TABS[i]===name));
-  TABS.forEach(n => document.getElementById('tab-'+n).classList.toggle('active', n===name));
+// ── UI ──────────────────────────────────────────────────────────────────────
+const TABS=['decode','encode','togmd'];
+function switchTab(n){
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',TABS[i]===n));
+  TABS.forEach(t=>document.getElementById('tab-'+t).classList.toggle('active',t===n));
 }
-function setStatus(id, msg, cls) {
-  const el = document.getElementById(id);
-  el.className = 'status '+(cls||'');
-  el.style.display = 'flex';
-  el.querySelector('span:last-child').textContent = msg;
+function setStatus(id,msg,cls){
+  const el=document.getElementById(id);
+  el.className='status '+(cls||'');el.style.display='flex';
+  el.querySelector('span:last-child').textContent=msg;
 }
-function setMeta(gridId, pairs) {
-  const g = document.getElementById(gridId);
-  g.innerHTML = pairs.map(([l,v])=>`<div class="metric"><div class="metric-label">${l}</div><div class="metric-val" title="${v}">${v}</div></div>`).join('');
-  g.style.display = 'grid';
+function setMeta(gid,pairs){
+  const g=document.getElementById(gid);
+  g.innerHTML=pairs.map(([l,v])=>`<div class="metric"><div class="metric-label">${l}</div><div class="metric-val" title="${v}">${v}</div></div>`).join('');
+  g.style.display='grid';
 }
-function formatBytes(b){
-  if(b<1024)return b+' B';
-  if(b<1048576)return(b/1024).toFixed(1)+' KB';
-  return(b/1048576).toFixed(2)+' MB';
+function fmtB(b){return b<1024?b+' B':b<1<<20?(b/1024).toFixed(1)+' KB':(b/(1<<20)).toFixed(2)+' MB';}
+function base(n){return n.replace(/(\.[^.]+)+$/,'');}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function setupDrop(did,iid,cb){
+  const z=document.getElementById(did),inp=document.getElementById(iid);
+  z.addEventListener('dragover',e=>{e.preventDefault();z.classList.add('dragover');});
+  z.addEventListener('dragleave',()=>z.classList.remove('dragover'));
+  z.addEventListener('drop',e=>{e.preventDefault();z.classList.remove('dragover');const f=e.dataTransfer.files[0];if(f)cb(f);});
+  inp.addEventListener('change',()=>{const f=inp.files[0];if(f)cb(f);});
 }
-function baseName(n){ return n.replace(/(\.[^.]+)+$/,''); }
-function setupDrop(dropId, inputId, onFile){
-  const zone=document.getElementById(dropId), input=document.getElementById(inputId);
-  zone.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('dragover');});
-  zone.addEventListener('dragleave',()=>zone.classList.remove('dragover'));
-  zone.addEventListener('drop',e=>{e.preventDefault();zone.classList.remove('dragover');const f=e.dataTransfer.files[0];if(f)onFile(f);});
-  input.addEventListener('change',()=>{const f=input.files[0];if(f)onFile(f);});
-}
-function dlBlob(blob,name){
-  const url=URL.createObjectURL(blob),a=document.createElement('a');
-  a.href=url;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(url),3000);
-}
-function readAB(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.onerror=rej;r.readAsArrayBuffer(f);});}
-function readTxt(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.onerror=rej;r.readAsText(f,'utf-8');});}
-function escHtml(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
+function dlBlob(blob,name){const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),3000);}
+function readAB(f){return new Promise((r,j)=>{const x=new FileReader();x.onload=e=>r(e.target.result);x.onerror=j;x.readAsArrayBuffer(f);});}
+function readTxt(f){return new Promise((r,j)=>{const x=new FileReader();x.onload=e=>r(e.target.result);x.onerror=j;x.readAsText(f,'utf-8');});}
 
-// ─────────────────────────────────────────────────────────────────────────────
-// BINARY CONSTANTS & HELPERS
-// ─────────────────────────────────────────────────────────────────────────────
-const USRHDR_SIZE = 48;
-const CLASS_GS56  = [0x83f3f042,0x0b263156];
-const CLASS_NAME  = [0xee933aa7,0x1aa1a4ac];
-function roundUp(x,l){return Math.ceil(x/l)*l;}
+// ── CONSTANTS (gs456scr.py) ─────────────────────────────────────────────────
+const USRHDR=48;
+const CLS56=[0x83f3f042,0x0b263156];
+const CLSNAM=[0xee933aa7,0x1aa1a4ac];
+const rup=(x,l)=>Math.ceil(x/l)*l;
 
-class Writer{
-  constructor(){this.chunks=[];this.size=0;}
-  write(d){const a=d instanceof Uint8Array?d:new Uint8Array(d);this.chunks.push(a);this.size+=a.length;}
-  u8(v){this.write([v]);}
-  u32(v,le=true){const b=new ArrayBuffer(4);new DataView(b).setUint32(0,v>>>0,le);this.write(new Uint8Array(b));}
-  str(s){this.write(new TextEncoder().encode(s));}
-  pad(n){if(this.size%n!==0)this.write(new Uint8Array(n-this.size%n));}
-  toU8(){const out=new Uint8Array(this.size);let off=0;for(const c of this.chunks){out.set(c,off);off+=c.length;}return out;}
+// ── WRITER ──────────────────────────────────────────────────────────────────
+class W{
+  constructor(){this.c=[];this.s=0;}
+  w(d){const a=d instanceof Uint8Array?d:new Uint8Array(d);this.c.push(a);this.s+=a.length;}
+  u8(v){this.w([v]);}
+  u32(v){const b=new ArrayBuffer(4);new DataView(b).setUint32(0,v>>>0,true);this.w(new Uint8Array(b));}
+  str(s){this.w(new TextEncoder().encode(s));}
+  pad(n){if(this.s%n)this.w(new Uint8Array(n-this.s%n));}
+  out(){const o=new Uint8Array(this.s);let p=0;for(const c of this.c){o.set(c,p);p+=c.length;}return o;}
 }
 
-function encUTF16(str){
-  const buf=new Uint8Array(str.length*2),v=new DataView(buf.buffer);
-  for(let i=0;i<str.length;i++)v.setUint16(i*2,str.charCodeAt(i),true);
-  return buf;
-}
-function decUTF16(u8,charCount){
-  const out=[];
-  for(let i=0;i<charCount-1;i++)out.push(String.fromCharCode(u8[i*2]|(u8[i*2+1]<<8)));
-  return out.join('');
-}
+// ── UTF-16LE (mirrors gs456scr.py read_str / write_str) ─────────────────────
+// read_str(f,l): f.read(l*2).decode('utf-16le')[:-1]
+// write_str(f,x): f.write((x+'\0').encode('utf-16le'))
+function rdStr(u8,n){let s='';for(let i=0;i<n-1;i++)s+=String.fromCharCode(u8[i*2]|(u8[i*2+1]<<8));return s;}
+function wrStr(s){const b=new Uint8Array((s.length+1)*2),d=new DataView(b.buffer);for(let i=0;i<s.length;i++)d.setUint16(i*2,s.charCodeAt(i),true);return b;}
 
-// ─────────────────────────────────────────────────────────────────────────────
-// DECODE: user.2.lang binary → {name, labels:[label,text][]}
-// Matches gs456scr.py read_gs56() logic
-// ─────────────────────────────────────────────────────────────────────────────
-function decodeUser2(buf){
+// ── DECODE (faithful port of gs456scr.py decode()) ──────────────────────────
+function decodeU2(buf){
   const u8=new Uint8Array(buf),dv=new DataView(buf);
   let p=0;
-  function assert(c,m){if(!c)throw new Error(m||'assert failed');}
-  function u32(){const v=dv.getUint32(p,true);p+=4;return v;}
-  function align(n){p=roundUp(p,n);}
+  const ok=(c,m)=>{if(!c)throw new Error(m);};
+  const r4=()=>{const v=dv.getUint32(p,true);p+=4;return v;};
+  const r8=()=>{const v=dv.getUint32(p,true);p+=8;return v;}; // lo only, hi always 0
+  const sp=(n)=>{p=rup(p,n);};
 
-  assert(u8[0]===85&&u8[1]===83&&u8[2]===82&&u8[3]===0,'Not a USR file — bad magic');
+  // USR header
+  ok(u8[0]===85&&u8[1]===83&&u8[2]===82&&u8[3]===0,'Not a USR file');
   p=4;
-  assert(u32()===0&&u32()===0&&u32()===0,'USR counts must be 0');
-  for(let i=0;i<3;i++){const lo=u32(),hi=u32();assert(lo===USRHDR_SIZE&&hi===0,`USR offset ${i} must be ${USRHDR_SIZE}`);}
-  align(16);
-  assert(p===USRHDR_SIZE,'USR header size mismatch');
+  ok(r4()===0&&r4()===0&&r4()===0,'USR counts must be 0');
+  for(let i=0;i<3;i++){const v=r8();ok(v===USRHDR,`USR offset[${i}] must be ${USRHDR}`);}
+  sp(16); ok(p===USRHDR,'USR header size mismatch');
 
-  assert(u8[p]===82&&u8[p+1]===83&&u8[p+2]===90&&u8[p+3]===0,'RSZ magic not found');
+  // RSZ block
+  const rb=p;
+  ok(u8[p]===82&&u8[p+1]===83&&u8[p+2]===90&&u8[p+3]===0,'RSZ magic not found');
   p+=4;
-  assert(u32()===16,'RSZ version must be 16');
-  assert(u32()===1,'RSZ object count must be 1');
-  const instanceCount=u32()-1;
-  assert(u32()===0&&u32()===0,'RSZ reserved must be 0');
+  ok(r4()===16,'RSZ version must be 16');
+  ok(r4()===1,'RSZ object count must be 1');
+  const ic=r4()-1; ok(ic>0,'instance_count must be >0');
+  ok(r4()===0,'RSZ userdata count must be 0');
+  ok(r4()===0,'RSZ reserved must be 0');
+  const ioff=r8(),doff=r8(),uoff=r8();
+  ok(uoff===doff,'userdata_offset must equal data_offset');
+  ok(r4()===ic,'object table count mismatch');
+  ok(p===rb+ioff,`instance_offset mismatch: expected ${rb+ioff} got ${p}`);
+  ok(r4()===0&&r4()===0,'null entry must be 0');
 
-  /* instance_offset */ u32();u32();
-  const dataOffLo=u32();u32();
-  /* userdata_offset */ u32();u32();
-
-  assert(u32()===instanceCount,'object table count mismatch');
-
-  const rsz_base=USRHDR_SIZE;
-
-  // null entry
-  assert(u32()===0&&u32()===0,'null entry must be 0,0');
-
-  let verified=false;
-  for(let i=0;i<instanceCount;i++){
-    const tid=u32(),crc=u32();
-    if(tid===CLASS_GS56[0]&&crc===CLASS_GS56[1]){assert(i<instanceCount-1,'GS56 class at wrong slot');verified=true;}
-    else if(tid===CLASS_NAME[0]&&crc===CLASS_NAME[1]){assert(i===instanceCount-1,'NAME class must be last');verified=true;}
-    else throw new Error(`Unknown class at index ${i}: 0x${tid.toString(16)} 0x${crc.toString(16)}`);
+  // class entries
+  for(let i=0;i<ic;i++){
+    const tid=r4(),crc=r4();
+    if(tid===CLS56[0]&&crc===CLS56[1]){ok(i!==ic-1,'GS56 class at last slot');}
+    else if(tid===CLSNAM[0]&&crc===CLSNAM[1]){ok(i===ic-1,'NAME class not at last slot');}
+    else throw new Error(`Unknown class @${i}: 0x${tid.toString(16)} 0x${crc.toString(16)}`);
   }
-  assert(verified,'Not a GS5/GS6 user.2 file');
 
-  p=rsz_base+dataOffLo;
+  sp(16); ok(p===rb+doff,`data offset mismatch: expected ${rb+doff} got ${p}`);
+
+  // data
   const data={name:'',labels:[]};
-
-  for(let i=0;i<instanceCount-1;i++){
-    const lsz=u32();
-    const label=decUTF16(u8.subarray(p,p+lsz*2),lsz);
-    p+=lsz*2; p=roundUp(p,4);
-    const tsz=u32();
-    const text=decUTF16(u8.subarray(p,p+tsz*2),tsz);
-    p+=tsz*2; p=roundUp(p,4);
-    data.labels.push([label,text]);
+  for(let i=0;i<ic-1;i++){
+    const ls=r4(),lab=rdStr(u8.subarray(p),ls);p+=ls*2;sp(4);
+    const ts=r4(),txt=rdStr(u8.subarray(p),ts);p+=ts*2;sp(4);
+    data.labels.push([lab,txt]);
   }
-  const nsz=u32();
-  data.name=decUTF16(u8.subarray(p,p+nsz*2),nsz);
+  const ns=r4();data.name=rdStr(u8.subarray(p),ns);p+=ns*2;sp(4);
+  // trailing index table verification
+  ok(r4()===ic-1,'trailing count mismatch');
+  for(let i=0;i<ic-1;i++)ok(r4()===i+1,`trailing index ${i} mismatch`);
   return data;
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ENCODE: {name, labels} → user.2.lang binary
-// Matches gs456scr.py write_gs56() logic
-// ─────────────────────────────────────────────────────────────────────────────
-function encodeUser2(data){
-  const labels=data.labels;
-  const instanceCount=labels.length+1;
-  const ds=new Writer();
-
-  for(const[label,text]of labels){
-    ds.u32(label.length+1);
-    ds.write(encUTF16(label));
-    ds.write(new Uint8Array(2)); // null terminator
-    ds.pad(4);
-    ds.u32(text.length+1);
-    ds.write(encUTF16(text));
-    ds.write(new Uint8Array(2));
-    ds.pad(4);
+// ── ENCODE (faithful port of gs456scr.py encode()) ──────────────────────────
+function encodeU2(data){
+  const ic=data.labels.length+1;
+  const ds=new W();
+  for(const[lab,txt]of data.labels){
+    ds.u32(lab.length+1);ds.w(wrStr(lab));ds.pad(4);
+    ds.u32(txt.length+1);ds.w(wrStr(txt));ds.pad(4);
   }
-  ds.u32(data.name.length+1);
-  ds.write(encUTF16(data.name));
-  ds.write(new Uint8Array(2));
-  ds.pad(4);
-  ds.u32(instanceCount-1);
-  for(let i=0;i<instanceCount-1;i++)ds.u32(i+1);
+  ds.u32(data.name.length+1);ds.w(wrStr(data.name));ds.pad(4);
+  // trailing index table
+  ds.u32(ic-1);for(let i=0;i<ic-1;i++)ds.u32(i+1);
+  const db=ds.out();
 
-  const dataBytes=ds.toU8();
-  const rszFixed=52;
-  const dataOffset=roundUp(rszFixed+8+instanceCount*8,16);
+  // offsets relative to RSZ base (USRHDR)
+  const ioff=52; // hardcoded per gs456scr.py
+  const doff=rup(ioff+8*(ic+1),16);
 
-  const rsz=new Writer();
-  rsz.write([82,83,90,0]);
-  rsz.u32(16);rsz.u32(1);rsz.u32(instanceCount+1);
-  rsz.u32(0);rsz.u32(0);
-  rsz.u32(rszFixed);rsz.u32(0);
-  rsz.u32(dataOffset);rsz.u32(0);
-  rsz.u32(dataOffset);rsz.u32(0);
-  rsz.u32(instanceCount);
-  rsz.u32(0);rsz.u32(0);
-  for(let i=0;i<instanceCount-1;i++){rsz.u32(CLASS_GS56[0]);rsz.u32(CLASS_GS56[1]);}
-  rsz.u32(CLASS_NAME[0]);rsz.u32(CLASS_NAME[1]);
-  if(rsz.size<dataOffset)rsz.write(new Uint8Array(dataOffset-rsz.size));
-  rsz.write(dataBytes);
+  const rsz=new W();
+  rsz.w([82,83,90,0]);rsz.u32(16);rsz.u32(1);rsz.u32(ic+1);rsz.u32(0);rsz.u32(0);
+  rsz.u32(ioff);rsz.u32(0); // instance_offset u64
+  rsz.u32(doff);rsz.u32(0); // data_offset u64
+  rsz.u32(doff);rsz.u32(0); // userdata_offset u64
+  rsz.u32(ic);rsz.u32(0);rsz.u32(0); // object table + null
+  for(let i=0;i<ic-1;i++){rsz.u32(CLS56[0]);rsz.u32(CLS56[1]);}
+  rsz.u32(CLSNAM[0]);rsz.u32(CLSNAM[1]);
+  rsz.pad(16); rsz.w(db);
 
-  const usr=new Writer();
-  usr.write([85,83,82,0]);
-  usr.u32(0);usr.u32(0);usr.u32(0);
-  for(let i=0;i<3;i++){usr.u32(USRHDR_SIZE);usr.u32(0);}
-  usr.pad(16);
-  usr.write(rsz.toU8());
-  return usr.toU8();
+  const usr=new W();
+  usr.w([85,83,82,0]);usr.u32(0);usr.u32(0);usr.u32(0);
+  for(let i=0;i<3;i++){usr.u32(USRHDR);usr.u32(0);}
+  usr.pad(16); usr.w(rsz.out());
+  return usr.out();
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// TEXT format for .txt round-trip
-// ─────────────────────────────────────────────────────────────────────────────
-function dataToText(data){
-  const lines=['[name]',data.name,''];
-  for(let i=0;i<data.labels.length;i++){
-    const[label,text]=data.labels[i];
-    lines.push(`[label ${i}]`,label,`[text ${i}]`,text,`[end ${i}]`,'');
-  }
-  return lines.join('\n');
-}
-function textToData(txt){
-  const lines=txt.split('\n');
-  const data={name:'',labels:[]};
-  let i=0;
-  while(i<lines.length&&lines[i].trim()!=='[name]')i++;
-  i++;
-  if(i<lines.length)data.name=lines[i++];
-  while(i<lines.length){
-    const lm=lines[i].trim().match(/^\[label (\d+)\]$/);
-    if(lm){
-      i++;
-      const labelLine=i<lines.length?lines[i++]:'';
-      if(i<lines.length&&lines[i].trim().match(/^\[text \d+\]$/))i++;
-      const endTag=`[end ${lm[1]}]`;
-      const textLines=[];
-      while(i<lines.length&&lines[i].trim()!==endTag)textLines.push(lines[i++]);
-      if(i<lines.length)i++;
-      data.labels.push([labelLine,textLines.join('\n')]);
-    } else i++;
-  }
-  return data;
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// GMD HELPERS (your full GMD encoder from the GMD converter tool)
-// ─────────────────────────────────────────────────────────────────────────────
-const VER_FROM={66049:1,66306:2};
+// ── GMD CONSTANTS (Trite699/GMD-Converter-Web) ──────────────────────────────
 const VER_TO={1:66049,2:66306};
-const LANG_FROM={0:'Japanese',1:'English',2:'French',3:'Spanish',4:'German',5:'Italian'};
 const LANG_TO={Japanese:0,English:1,French:2,Spanish:3,German:4,Italian:5};
-
-function replaceFullwidth(s){return s.replace(/[\uFF00-\uFFEF]/g,'###');}
-
-function crc32(s){
-  const CRC32T=(()=>{const t=new Uint32Array(256);for(let i=0;i<256;i++){let c=i;for(let j=0;j<8;j++)c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1);t[i]=c;}return t;})();
-  const e=new TextEncoder().encode(s);let c=0xFFFFFFFF;
-  for(const b of e)c=CRC32T[(c^b)&0xFF]^(c>>>8);
-  return(c^0xFFFFFFFF)>>>0;
-}
-function calcHash(label){return[(~crc32(label+label))>>>0,(~crc32(label+label+label))>>>0];}
-
-function xorCipher(data,ver=1){
+const rfull=s=>s.replace(/[\uFF00-\uFFEF]/g,'###');
+const CRC32T=(()=>{const t=new Uint32Array(256);for(let i=0;i<256;i++){let c=i;for(let j=0;j<8;j++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[i]=c;}return t;})();
+const crc32=s=>{const e=new TextEncoder().encode(s);let c=0xFFFFFFFF;for(const b of e)c=CRC32T[(c^b)&0xFF]^(c>>>8);return(c^0xFFFFFFFF)>>>0;};
+const calcHash=l=>[(~crc32(l+l))>>>0,(~crc32(l+l+l))>>>0];
+function xor(data,ver=1){
   const k1=ver===1?"fjfajfahajra;tira9tgujagjjgajgoa":"e43bcc7fcab+a6c4ed22fcd433/9d2e6cb053fa462-463f3a446b19";
   const k2=ver===1?"mva;eignhpe/dfkfjgp295jtugkpejfu":"861f1dca05a0;9ddd5261e5dcc@6b438e6c.8ba7d71c*4fd11f3af1";
-  const out=new Uint8Array(data.length);
-  for(let i=0;i<data.length;i++)out[i]=data[i]^k1.charCodeAt(i%k1.length)^k2.charCodeAt(i%k2.length);
-  return out;
+  const o=new Uint8Array(data.length);
+  for(let i=0;i<data.length;i++)o[i]=data[i]^k1.charCodeAt(i%k1.length)^k2.charCodeAt(i%k2.length);
+  return o;
 }
 
-// Build a GMD binary from label/text pairs + metadata
-// version: 1 = GS5 (XOR encrypted), 2 = GS6 (plain)
-function buildGmd(labels, gmdName, language, version){
-  const enc=new TextEncoder();
-  const labelNames=labels.map(([l])=>l);
-  const texts=labels.map(([,t])=>t);
+// ── TAG MAPPINGS (Trite699/GMD-Converter-Web DD_MAPPING + SOJ_MAPPING + SOJ_OVERWRITE) ──
+const DD_MAP={
+  "CNTR":"CENTER","ICON PAD_X":"ICN 2","ICON PAD_L":"ICN 4","ICON PAD_R":"ICN 5",
+  "ICON PAD_CROSS":"ICN 9","ICON PAD_SLIDE":"ICN 8",
+  "E001":"_END_","E003":"w","E004":"JUMP","E005":"c0","E006":"c1","E007":"c2","E008":"c3","E009":"c4",
+  "E020":"REG_SET","E021":"B_REG","E022":"B_RAND","E023":"p","E024":"pa","E025":"s","E026":"CALL",
+  "E027":"pdm","E028":"FLAG_ON","E029":"FLAG_OFF","E030":"B_FLAG","E031":"SCENE_JUMP",
+  "E032":"B_SCE_JUMP","E033":"CALL_EXTERNAL","E037":"REG_ADD","E040":"WND","E041":"MSG",
+  "E050":"B_FLAGS","E051":"B_FLAGS_SET","E052":"B_SCENE","E053":"MSG_SKIP_INVALID","E054":"msg_se",
+  "E056":"COURT_FILE_BTN_VISIBLE","E057":"OP_TITLE","E060":"THUMB_ON","E061":"THUMB_OFF",
+  "E062":"THUMB_ON_SCREEN","E065":"FILTER_SET","E066":"FILTER_WAIT","E070":"FADE",
+  "E071":"FADE_WAIT","E072":"FADE_BG","E073":"FADE_BG_WAIT","E074":"FADE_MODEL",
+  "E075":"FADE_MODEL_WAIT","E077":"FADE_KAISOU_OUT","E078":"FADE_KAISOU_NOCAM_OUT",
+  "E081":"BGM_CONTEXT","E082":"BGM_WAIT","E083":"BGM_SWAP","E084":"BGM_FADE_OUT_OF",
+  "E085":"BGM_PLAY","E086":"SE_PLAY","E087":"BGM_STOP","E088":"SE_STOP","E089":"BGM_VOLUME",
+  "E090":"SE_VOLUME","E091":"BGM_FADE_IN","E092":"BGM_FADE_OUT","E093":"SE_FADE_IN",
+  "E094":"SE_FADE_OUT","E097":"SE_WAIT","E098":"SE_KEYOFF","E099":"SE_VOLUME_OF",
+  "E100":"ITEM_ADD","E101":"ITEM_REMOVE","E102":"ITEM_REMOVE_ALL","E103":"EVIDENCE_GET",
+  "E104":"egw","E105":"EVIDENCE_UPDATE","E106":"ITEM_UPDATE","E107":"B_ITEM","E108":"B_ITEMS",
+  "E109":"B_ITEMS_SET","E110":"FADE_KAISOU_OUT2","E111":"FADE_KAISOU_NOCAM_OUT2",
+  "E113":"BGM_WAIT_OF","E114":"BGM_PLAY_STAFFROLL","E115":"INV_SET_ANOTHER_CUT",
+  "E116":"INV_DETAIL_CAM_SET","E117":"BG_ORNAMENT_FADE_IN","E118":"BG_ORNAMENT_FADE_OUT",
+  "E119":"BG_ORNAMENT_FADE_WAIT","E120":"BG_SET","E121":"BG_ORNAMENT","E122":"USE_BG_CAMERA_ONLY",
+  "E123":"BG_CHANGE","E124":"SELECT_POTTERY","E125":"CHR_STOP_SE","E127":"CHR_WAIT_ODOROKI",
+  "E128":"CHR_ANIME_NOSTART_ODOROKI","E129":"CHR_ANIME_SPECIAL_ODOROKI","E130":"CAM_SET",
+  "E131":"CAM_WAIT","E132":"CAM_SET_FRAME","E133":"CAM_RESUME","E134":"CHR_ANIME_ODOROKI",
+  "E135":"CHR_POS_SET","E136":"CHR_DEL_2D_OR_3D","E137":"CHR_SET_2D_OR_3D",
+  "E138":"CHR_WAIT_WITHOUT_MOT","E139":"CHR_WAIT_EVENT","E140":"CHR_SET","E141":"CHR_DEL",
+  "E142":"CHR_BST_SET","E143":"CHR_BST_DEL","E144":"CHR_WAIT","E145":"CHR_ANIME",
+  "E146":"CHR_ANIME_SE","E147":"CHR_ANIME_NOSTART","E148":"CHR_SET_NOSTART",
+  "E149":"CHR_BST_SET_NOSTART","E150":"CHR_FORCE_MOUSE","E152":"CHR_LOAD","E153":"CHR_UNLOAD",
+  "E154":"CHR_POS","E155":"CHR_BST_POS","E156":"CHR_MAT_CHG","E157":"CHR_VISIBLE",
+  "E158":"B_CHR_SET","E159":"CHR_PARTS_DISP","E160":"CHR_ANIME_REP","E161":"CHR_UNLOAD_ALL",
+  "E162":"CHR_SET_CHILD","E163":"CHR_BST_SET_CHILD","E164":"CHR_ANIME_SPECIAL",
+  "E165":"CHR_ANIME_SPECIAL_NO_SE","E166":"GADGET_FADE","E167":"GADGET_ANIME",
+  "E168":"GADGET_COLOR","E169":"CHR_MOUTH","E170":"CHR_ALPHA","E172":"MNK_UNLOAD",
+  "E173":"MNK_LOAD","E174":"MNK_FORCE_START","E175":"MNK_INDUCTION_DEMO","E176":"MNK_BUTTON",
+  "E177":"MNK_LABEL","E178":"MNK_START","E179":"MNK_MSG_SET","E180":"MNK_MSG",
+  "E181":"MNK_CHR_SET","E183":"mnp","E184":"mn_seg","E185":"mn_ans","E186":"MNK_CLEAR",
+  "E187":"MNK_MSG_INIT","E188":"MNK_START_TUTORIAL","E189":"MNK_TUTORIAL_CURSOR_WAIT",
+  "E190":"BIG_FONT","E191":"BIG_FONT_WAIT","E192":"MNK_TEXT_START_TUTORIAL",
+  "E193":"MARK_CONFALENCE","E194":"MARK_TSTMNY","E195":"TESTIMONY","E196":"tw",
+  "E197":"COURT_IN","E198":"COURT_IN_WAIT","E201":"NOT_GUILTY","E202":"NOT_GUILTY_WAIT",
+  "E205":"EXAMINE","E206":"ew","E207":"SCENARIO_MODE","E208":"HAMMER_PLAY","E209":"HAMMER_WAIT",
+  "E210":"DEMO_PLAY","E211":"DEMO_WAIT","E212":"pig","E213":"HAMMER_PLAY_STOP_BGM",
+  "E214":"NOW_DATA_SET","E215":"MNK_TUTORIAL_CONT_LABEL","E216":"PSY_KOKONE_END",
+  "E217":"PSY_KOKONE_CLEAR","E218":"INV_EVI_GOTO","E220":"CHOICE_START","E221":"CHOICE_INIT",
+  "E222":"CHOICE_SET","E223":"CHOICE_JUMP","E224":"THRUST_FORCE","E225":"B_THRUST_FORCE",
+  "E226":"B_THRUST_FORCE_2","E227":"PSY_LOAD","E228":"PSY_BUTTON","E229":"PSY_LABEL_SET",
+  "E230":"PSY_LOCK_BREAK","E231":"PSY_CLEAR","E232":"PSY_INDUCTION_START",
+  "E233":"PSY_INDUCTION_END","E234":"PSY_END","E235":"PSY_ROCK_SET","E237":"PSY_ROCK_BLACK",
+  "E238":"PSY_FORCE_END","E239":"PSY_START_NO_DEMO","E240":"EXAM_MESS_INIT",
+  "E241":"EXAM_MESS_SET","E242":"EXAM_MESS_END","E243":"EXAM_START","E244":"EXAM_ANSWER_SET",
+  "E245":"EXAM_MESS_NEXT_SET","E246":"PSY_UNLOAD","E247":"PSY_KOKONE_BREAK_SETUP",
+  "E248":"B_EXAM_NEXT_FOLLOW","E249":"B_EXAM_FAILD","E250":"PSY_THRUST_ANSWER_SET",
+  "E252":"STAFFROLL_TIMER","E253":"STAFFROLL_TIMER_WAIT","E254":"STAFFROLL_2_WAIT",
+  "E255":"B_THRUST_FORCE_NO_KURAE","E256":"PSY_KOKONE_BREAK","E257":"PSY_KOKONE_BREAK_WAIT",
+  "E258":"PLAYER_SET","E259":"PARTNER_SET","E260":"MSG_EXAM_PARTNER","E261":"PARTNER_OFF",
+  "E266":"PARTNER_EXAM_NEXT_SET","E267":"PARTNER_HINT_LABEL_SET",
+  "E268":"PARTNER_DAMAGE_COUNT_RESET","E270":"STAFFROLL_OPEN","E271":"STAFFROLL_CLOSE",
+  "E272":"STAFFROLL_INIT","E273":"STAFFROLL_END","E274":"STAFFROLL_2_INIT",
+  "E275":"STAFFROLL_2_START","E276":"STAFFROLL_2_END","E277":"INV_EVIDENCE_START_TUTORIAL",
+  "E279":"GAUGE_PREDAMAGE","E280":"GAUGE_IN","E281":"GAUGE_OUT","E282":"GAUGE_WAIT",
+  "E283":"GAUGE_DAMAGE","E284":"B_LIFE_ZERO","E285":"GAME_OVER","E286":"GAUGE_RESET",
+  "E287":"RETRY_ITEM_STORE","E288":"GAME_OVER_PANEL_ONLY","E289":"INV_USE_2D_CAMERA",
+  "E290":"INV_EVIDENCE_DEMO","E291":"INV_EVIDENCE_FINISH","E292":"INV_EVIDENCE_INIT",
+  "E293":"INV_EVIDENCE_START","E294":"TV_WAIT","E295":"TV_PO_INIT","E296":"TV_OPEN",
+  "E297":"TV_NEXT","E298":"TV_SET","E299":"TV_CLOSE","E300":"EVENT_SHOW","E301":"EVENT_END",
+  "E302":"TEXTCUT_SHOW","E303":"TEXTCUT_END","E304":"EVENT_FADE_SWAP","E305":"EVENT_FADE_WAIT",
+  "E306":"PO_INIT","E307":"PO_START","E308":"PO_POINT_CLOSE","E309":"PO_EVENT_CLOSE",
+  "E310":"PO_FINISH","E311":"INV_INIT","E312":"INV_CAM_ADD","E313":"INV_LABEL_SET",
+  "E315":"INV_DETAIL_CAM","E316":"INV_CAM_WAIT","E317":"INV_CAM_RET","E318":"INV_HIT_SET",
+  "E319":"INV_MOT_SET","E320":"INV_MOT_WAIT","E321":"INV_CAM_SET","E322":"INV_COND_ADD",
+  "E324":"INV_OPEN","E326":"INV_EVI_FLAG_SET","E327":"B_HIT_EVIDENCE","E329":"BG_USE_COLOR",
+  "E330":"aya","E331":"dam","E332":"gek","E333":"hir","E334":"kia","E335":"sho",
+  "E336":"dm0","E338":"f","E339":"f2","E340":"fw","E341":"q0","E342":"q1","E343":"q2",
+  "E345":"bak","E346":"skn","E354":"PARTNER_HINT_ENABLE","E369":"DTC_INIT",
+  "E370":"DTC_INDEX_INIT","E371":"DTC_MODE","E372":"DTC_INDEX_TALK","E373":"DTC_INDEX_INVEST",
+  "E374":"DTC_INDEX_MOVE","E375":"DTC_INDEX_THRUST","E376":"DTC_TALK_FORCE_IN",
+  "E377":"DTC_TALK_SET","E378":"DTC_TALK_UPDATE","E379":"DTC_THRUST_INIT",
+  "E380":"DTC_THRUST_SET","E381":"B_DTC_THRUST","E382":"DTC_INDEX_INIT_END",
+  "E383":"DTC_INV_LABEL","E384":"B_DTC_SETUP","E385":"DTC_TOPIC_INIT","E386":"DTC_MOVE_SET",
+  "E388":"DTC_MOVE_FLAG","E390":"DTC_END_INIT","E391":"DTC_END_ITEM_SET",
+  "E392":"DTC_END_FLAG_SET","E393":"DTC_START","E394":"B_DTC_END","E397":"INTERVAL",
+  "E398":"KOKORO_RANDOM_NOISE_START","E399":"KOKORO_RANDOM_NOISE_END","E400":"KOKORO_INIT",
+  "E401":"KOKORO_END","E402":"KOKORO_DEMO","E403":"KOKORO_SET_PHRASE",
+  "E404":"KOKORO_UPDATE_EXAM","E405":"KOKORO_UPDATE","E406":"KOKORO_TUTO_NOISE_START",
+  "E407":"KOKORO_TUTO_NOISE_END","E409":"KOKORO_SET_CAPTION",
+  "E410":"KOKORO_EXAM_TESTIMONY_SET_EX","E411":"KOKORO_UPDATE_DELAY","E412":"KOKORO_WAIT",
+  "E413":"KOKORO_EXAM_TESTIMONY_SET","E414":"KOKORO_EXAM_MESS_SET","E416":"B_KOKORO_PHRASE",
+  "E417":"KOKORO_SAGURU_ADD_HIT_MASK","E418":"KOKORO_TUKITO_ADD_TESTIMONY_EX",
+  "E419":"KOKORO_BGM","E421":"KOKORO_SAGURU_ADD_TESTIMONY","E422":"KOKORO_SAGURU_ADD_PHRASE",
+  "E423":"KOKORO_NOISE","E425":"KOKORO_SAGURU","E426":"KOKORO_TUKITO_ADD_TESTIMONY",
+  "E427":"KOKORO_TUKITO_ADD_PHRASE","E428":"KOKORO_TUKITO","E429":"KOKORO_TUKITO_TUTO_PHRASE",
+  "E430":"KOKORO_TUTO_IN","E431":"KOKORO_TUTO_OUT","E432":"KOKORO_TUTO_SET_ICON",
+  "E433":"KOKORO_TUKITO_TUTO_IN","E434":"KOKORO_TUKITO_TUTO_OUT",
+  "E435":"KOKORO_CLEAR_TESTIMONY","E436":"KOKORO_SET_CAM","E437":"KOKORO_SHUTDOWN",
+  "E438":"KOKORO_SHOW","E439":"KOKORO_HIDE","E440":"EVENT_MOVE","E441":"EVENT_MOVE_WAIT",
+  "E442":"EVENT_SHOW_FADE","E443":"EVENT_END_FADE","E444":"EVENT_SHOW_BACK","E445":"MOVIE_PLAY",
+  "E446":"MOVIE_WAIT","E449":"MEMO_SET_TASK","E450":"MEMO_ALL_REMOVE",
+  "E451":"MEMO_TASK_FINISH","E452":"MEMO_SET_SUMMARY","E453":"EVENT_SHOW_FADE_BACK",
+  "E454":"EVENT_END_FADE_BACK","E455":"MEMO_SET_SUMMARY_P2",
+  "E456":"KOKORO_TUKITO_ADD_TESTIMONY_FLAG","E457":"BB_SMALL_MSG_WAIT","E458":"BB_SMALL_MSG",
+  "E459":"BB_BIG_MSG","E460":"COMBO_THUMB_ON","E461":"COMBO_THUMB_OFF",
+  "E462":"COMBO_GET_KEYWORD","E465":"COMBO_START","E466":"COMBO_START_RESUME",
+  "E467":"COMBO_END","E468":"COMBO_WAIT","E469":"COMBO_NEXT","E470":"COMBO_EVENT_SHOW",
+  "E471":"COMBO_EVENT_END","E474":"COMBO_KEYWORD_BACK","E476":"COMBO_WAIT_KEYWORD",
+  "E477":"COMBO_WAIT_EVENT","E478":"COMBO_WAIT_THUMB","E480":"COMBO_FAIL",
+  "E481":"COMBO_REBIRTH","E483":"COMBO_WAIT_LINE","E484":"COMBO_BG_SPEED",
+  "E485":"COMBO_END_RESUME","E486":"COMBO_STAR_LEVEL","E487":"COMBO_THUMB_ON_LINE",
+  "E488":"KOKORO_TUKITO_ADD_TESTIMONY_READ","E489":"MOVIE_PLAY_EX","E511":"COMBO_FAIL_IF",
+  "E512":"DTC_MOVE_FLAG_SET","E513":"MOVIE_PLAY_LIMIT","E514":"BGM_PREPARE_PAUSE",
+  "E515":"BGM_PREPARE_RESUME","E750":"PRE_SET_SCENE","E751":"PRE_SET_ITEM_ADD",
+  "E752":"PRE_SET_ITEM_REMOVE","E753":"PRE_SET_ITEM_REMOVE_ALL","E754":"PRE_SET_FLAG_ON",
+  "E755":"PRE_SET_FLAG_OFF","E756":"PRE_SET_ITEM_UPDATE","E761":"PRE_SET_DTC_TOPIC_ON",
+  "E762":"PRE_SET_DTC_MOVE_FLAG","E765":"PRE_SET_NOW_DATA_SET","E766":"PRE_SET_MEMO_SET_TASK",
+  "E767":"PRE_SET_MEMO_ALL_REMOVE","E768":"PRE_SET_MEMO_TASK_FINISH",
+  "E769":"PRE_SET_MEMO_SET_SUMMARY","E770":"PRE_SET_MEMO_SET_SUMMARY_P2","E800":"ROWE"
+};
+const SOJ_MAP={
+  "ICON PAD_Y":"ICN 21","ICON PAD_A":"ICN 22","ICON PAD_B":"ICN 23",
+  "E010":"c5","E039":"SCENE_JUMP_NEXT","E063":"WND_CLOSE","E067":"DEMO_UNK1",
+  "E096":"stse_mwn","E171":"GADGET_WAIT","E182":"MNK_DURUKU_FAILD_LABEL",
+  "E219":"INV_EVI_RET","E262":"HAMMER_PLAY_STOP_SOUND","E263":"NOT_GUILTY_CIVIL",
+  "E328":"INV_USE_LUMI","E347":"qa","E353":"skn0","E356":"QUAKE",
+  "E365":"DTC_MODE_NO_BTN_SELECT","E366":"DTC_MODE_NO_INV","E367":"INV_CAM_SET2",
+  "E368":"DTC_MODE_NO_MOVE","E463":"COMBO_LOAD","E464":"COMBO_OUT_PLAYER",
+  "E472":"COMBO_EVENT_THUMB_END","E473":"COMBO_SET_WAY","E475":"COMBO_REBIRTH_SE",
+  "E482":"COMBO_THUMB_CLR","E490":"DTC_TOPIC_FLAG_OFF","E491":"INV_CAM_SET_END",
+  "E492":"INV_POINT_RESET","E493":"INV_EVI_THRUST_START_TUTO","E494":"CHR_SET_MULTI",
+  "E495":"CHR_SET_MULTI_NOSTART","E496":"CHR_SET_SOUHEI","E516":"KS_ARC_LOAD",
+  "E517":"KS_ARC_RELEASE","E518":"KS_BGM","E519":"KS_SETUP_PHASE","E520":"KS_EXECUTE",
+  "E521":"KS_SET_BRANCH","E522":"MEMO_SET_SUMMARY_CIVIL","E523":"ANIME_PLAY",
+  "E524":"CAM_PLAY_DTC_BG_FADE_DISABLE","E526":"CAM_PLAY","E527":"CAM_SW",
+  "E528":"SPIRIT_SETUP","E529":"SPIRIT_EXECUTE","E530":"SPIRIT_SET_PHASE",
+  "E531":"SPIRIT_FINAL","E532":"SPIRIT_IS_DECIDE","E533":"SPIRIT_SENSE_CHECK",
+  "E535":"SPIRIT_REQ_AST_CHG","E536":"SPIRIT_REQ_AST_INS","E537":"SPIRIT_AST_CHG_EXE",
+  "E539":"ASSERTION_START","E541":"KS_SETUP_BERSERK_2ND","E543":"SPIRIT_ANSWER_JUMP",
+  "E545":"SPIRIT_START_DEMO","E547":"SPIRIT_DANCE_DEMO","E548":"SPIRIT_STATIC_IMAGE_IN",
+  "E549":"SPIRIT_STATIC_IMAGE_OUT","E550":"SPIRIT_TUTORIAL","E553":"CAM_ZOOM_IN_POS",
+  "E556":"FINGER_INIT","E557":"FINGER_START","E558":"FINGER_LABEL_SET",
+  "E559":"FINGER_SET_OFFSET","E560":"FINGER_TUTO","E561":"FINGER_COLLATE",
+  "E562":"POM_SETUP","E563":"POM_EXECUTE","E564":"POM_FINAL","E565":"POM_REG_ANSWER",
+  "E566":"POM_CLEAR_ANSWER","E567":"POM_B_CORRECT","E568":"POM_B_HIT_ID",
+  "E570":"BOX_SETUP","E571":"BOX_EXECUTE","E572":"BOX_FINAL","E573":"BOX_B_SUCCESS",
+  "E574":"BOX_B_FAILURE","E575":"BOX_OPEN","E576":"CAM_ZOOM_IN_OFFS",
+  "E579":"INV_EVI_THRUST_START","E580":"INV_EVI_MOT_PLAY","E581":"INV_EVI_COLLISION",
+  "E582":"INV_EVI_MOT_SET","E583":"FINGER_ARROW","E585":"DELTA_TIME_SET",
+  "E587":"SPIRIT_B_FAIL_TYPE","E588":"CHR_TAG_WAIT","E589":"SDL_EV_ID_WAIT",
+  "E590":"EFC_LINE_SET","E591":"EFC_LINE_END","E592":"SPIRIT_CHANGE_EXIT",
+  "E595":"NOT_GUILTY_ANIM","E598":"CAM_ZOOM_REVERSE","E599":"CAM_PLAY_LOOK_UP",
+  "E609":"BGM_PLAY_VOLUME","E611":"BGM_VOLUME_OF","E612":"STRM_PLAY","E613":"STRM_STOP",
+  "E614":"STRM_FADE_IN","E615":"STRM_FADE_OUT","E616":"STRM_WAIT_OF","E617":"STRM_WAIT",
+  "E619":"STRM_VOLUME_OF","E620":"STRM_PLAY_NC","E621":"STRM_FADE_OUT_OF",
+  "E638":"dog_se","E641":"SE_CAM_VOL_MIN_SET","E642":"SE_CAM_FO_FORCE",
+  "E646":"SE_FADE_OUT_WAIT","E661":"RELIC_DEMO_FINAL","E662":"SCE00_OP_DEMO",
+  "E663":"SCE00_OP_DEMO_WAIT","E664":"KS_TUTORIAL","E665":"KS_SET_THROUGH",
+  "E675":"RESET_LAYOUT_CAM","E676":"WALLPAPER_SET","E678":"PHOTO_FACE_SET",
+  "E771":"PRE_SET_PLAYER_SET","E772":"PRE_SET_SCENARIO_MODE",
+  "E773":"PRE_SET_MEMO_SET_SUMMARY_CIVIL","E795":"MSGS","E796":"MSGE"
+};
+const SOJ_OVR={
+  "E525":"CAM_WAIT","E600":"BGM_CONTEXT","E601":"BGM_WAIT","E602":"BGM_SWAP",
+  "E603":"BGM_FADE_OUT_OF","E604":"BGM_PLAY","E605":"BGM_STOP","E606":"BGM_FADE_IN",
+  "E607":"BGM_FADE_OUT","E608":"BGM_VOLUME","E610":"BGM_WAIT_OF","E630":"SE_PLAY",
+  "E631":"SE_STOP","E632":"SE_VOLUME","E633":"SE_WAIT","E634":"SE_FADE_IN",
+  "E635":"SE_FADE_OUT","E639":"SE_VOLUME_OF","E081":"bgm_mw","E082":"BOKEH_FILTER_ON",
+  "E083":"BOKEH_FILTER_OFF","E084":"BOKEH_FILTER_WAIT","E085":"stse_mw",
+  "E086":"WND_OPEN_QUICK","E087":"WND_CLOSE_QUICK","E088":"FADE_SCENE",
+  "E090":"FADE_KAISOU_START_IN","E091":"FADE_KAISOU_NOCAM_START","E093":"FADE_KAISOU_END_IN",
+  "E094":"FADE_KAISOU_NOCAM_END","E097":"FADE_KAISOU_EVENT_START",
+  "E098":"FADE_KAISOU_EVENT_END","E114":"INV_REGION_SET","E122":"BG_ORNAMENT_MTR_ANM",
+  "E127":"BOW","E129":"BG_ORNAMENT_ALPHA","E130":"SET_CAM_FAR",
+  "E142":"CHR_SET_AND_REMOVAL","E143":"CHR_WAIT_LINK","E148":"CHR_ANIME_NSS",
+  "E149":"CHR_SET_NOSTART","E150":"CHR_FORCE_MOUTH","E159":"CHR_LOOP_WAIT",
+  "E162":"CHR_LEAVE","E163":"CHR_ANIME_NO_SE","E193":"MARK","E194":"CHR_SET_VOFF",
+  "E259":"PO_ANSWER_SET","E261":"DEMO_DEL","E268":"INV_CAM_RET_FORCE",
+  "E515":"CAM_RETURN_DEFAULT"
+};
 
-  // section content: each text + \0, joined
-  let contentBytes=new Uint8Array(0);
-  for(const text of texts){
-    const fixed=(text+'\x00').replace(/\n/g,'\r\n');
-    const b=enc.encode(fixed);
-    const m=new Uint8Array(contentBytes.length+b.length);
-    m.set(contentBytes);m.set(b,contentBytes.length);
-    contentBytes=m;
+function buildMapping(isSOJ){
+  return isSOJ ? Object.assign({},DD_MAP,SOJ_MAP,SOJ_OVR) : Object.assign({},DD_MAP,SOJ_MAP);
+}
+
+const NO_PREFIX=new Set(["CENTER","ICN","PAGE"]);
+const NO_COMMA=new Set(["ICN","ICN 0","ICN 2","ICN 4","ICN 5","ICN 6","ICN 7","ICN 8","ICN 9",
+  "ICN 10","ICN 11","ICN 12","ICN 13","ICN 14","ICN 15","ICN 16","ICN 19","ICN 20",
+  "ICN 21","ICN 22","ICN 23"]);
+const REMOVE_TAGS=["SEC_END"];
+
+function applyMapping(text, mapping){
+  for(const[k,v]of Object.entries(mapping)){
+    const re=new RegExp('<'+k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'g');
+    text=text.replace(re,'<'+v);
+  }
+  return text;
+}
+function removeTags(text){
+  for(const t of REMOVE_TAGS) text=text.replace(new RegExp('<'+t+'[^>]*>','g'),'');
+  return text;
+}
+function addPrefixAndCommas(text){
+  // spaces→commas inside tags (except NO_COMMA tags)
+  text=text.replace(/<([^>]+)>/g,(m,inner)=>{
+    for(const nc of NO_COMMA) if(inner===nc||inner.startsWith(nc+' ')) return m;
+    return '<'+inner.replace(/ /g,',')+'>'; 
+  });
+  // add E prefix to opcodes (tags not in NO_PREFIX and not already prefixed)
+  text=text.replace(/<([A-Z_][^,>]*)([,>])/g,(m,tag,sep)=>{
+    if(NO_PREFIX.has(tag.split(',')[0])) return m;
+    if(tag.startsWith('E ')) return m;
+    return '<E '+tag+sep;
+  });
+  return text;
+}
+
+// ── BUILD GMD (user.2 labels → GMD binary) ──────────────────────────────────
+function buildGmd(labels, gmdName, language, version, isSOJ){
+  const enc=new TextEncoder();
+  const mapping=buildMapping(isSOJ);
+  const labelNames=[], parts=[];
+
+  for(const[lab,txt]of labels){
+    labelNames.push(lab);
+    let t=txt;
+    t=applyMapping(t,mapping);
+    t=removeTags(t);
+    t=addPrefixAndCommas(t);
+    parts.push(t);
   }
 
-  const labelCount=labelNames.length;
-  const sectionCount=labelCount;
-  const langInt=LANG_TO[language]??1;
-  const versionInt=VER_TO[version]||version;
-  const xorEnc=(version===1);
+  // build content bytes: each text + \0, \n→\r\n
+  let content=new Uint8Array(0);
+  for(const t of parts){
+    const b=enc.encode((t+'\x00').replace(/\n/g,'\r\n'));
+    const m=new Uint8Array(content.length+b.length);
+    m.set(content);m.set(b,content.length);content=m;
+  }
 
-  // label sizes & offsets
-  const labelStr=labelNames.join('\x00')+'\x00';
-  const labelSizeCalc=labelCount<1?0:replaceFullwidth(labelStr).length;
-  const sectionSizeCalc=contentBytes.length;
+  const lc=labelNames.length, sc=lc;
+  const li=LANG_TO[language]??1;
+  const vi=VER_TO[version];
+  const doXor=(version===1);
+  const lstr=labelNames.join('\x00')+'\x00';
+  const lsz=lc<1?0:rfull(lstr).length;
 
-  const w=new Writer();
-  w.write([71,77,68,0]); // GMD\0
-  w.u32(versionInt);w.u32(langInt);w.u32(0);w.u32(0);
-  w.u32(labelCount);w.u32(sectionCount);
-  w.u32(labelSizeCalc);w.u32(sectionSizeCalc);w.u32(gmdName.length);
+  const w=new W();
+  w.w([71,77,68,0]); // GMD\0
+  w.u32(vi);w.u32(li);w.u32(0);w.u32(0);
+  w.u32(lc);w.u32(sc);w.u32(lsz);w.u32(content.length);w.u32(gmdName.length);
   w.str(gmdName);w.u8(0);
 
   if(version===1){
-    // V1: pairs of [index, label_offset]
-    let curOff=0;
-    for(let i=0;i<labelCount;i++){
-      w.u32(i);w.u32(curOff);
-      curOff+=replaceFullwidth(labelNames[i]).length+1;
-    }
+    let off=0;
+    for(let i=0;i<lc;i++){w.u32(i);w.u32(off);off+=rfull(labelNames[i]).length+1;}
   } else {
-    // V2: triples of [hash1, hash2, label_offset] + labelRef2 + hash table
-    const offsets={};
-    let curOff=0;
-    for(let i=0;i<labelCount;i++){
+    let off=0;
+    for(let i=0;i<lc;i++){
       const[h1,h2]=calcHash(labelNames[i]);
-      offsets[i]=[h1,h2,curOff];
-      curOff+=replaceFullwidth(labelNames[i]).length+1;
-    }
-    for(let i=0;i<labelCount;i++){
-      const[h1,h2,off]=offsets[i];
       w.u32(h1);w.u32(h2);w.u32(off);
-      w.u32(0);w.u32(0); // labelRef1, labelRef2 placeholders
+      w.u32(0);w.u32(0);
+      off+=rfull(labelNames[i]).length+1;
     }
-    // 1024-byte hash table (empty — zeros)
-    w.write(new Uint8Array(1024));
+    w.w(new Uint8Array(1024)); // empty hash table
   }
 
   for(const n of labelNames){w.str(n);w.u8(0);}
-  w.write(xorEnc?xorCipher(contentBytes,1):contentBytes);
-  return w.toU8();
+  w.w(doXor?xor(content,1):content);
+  return w.out();
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// PREVIEW HELPERS
-// ─────────────────────────────────────────────────────────────────────────────
-let decPreviewData=null, togmdPreviewData=null;
+// ── PREVIEW ──────────────────────────────────────────────────────────────────
+let decPrev=null, togmdPrev=null;
 
-function renderLabelPreview(containerId, statsId, listId, labels, filter){
-  const list=document.getElementById(listId);
-  const stats=document.getElementById(statsId);
+function renderList(listId, statsId, labels, q){
+  const list=document.getElementById(listId), stats=document.getElementById(statsId);
   if(!list)return;
-  const q=filter.toLowerCase();
-  const filtered=labels.filter(([name,text])=>!q||name.toLowerCase().includes(q)||text.toLowerCase().includes(q));
-  if(stats)stats.textContent=filter?`${filtered.length} of ${labels.length} labels`:`${labels.length} labels`;
-  list.innerHTML=filtered.map(([name,text],i)=>{
-    const hasText=text.trim().length>0;
-    return`<div class="label-item">
-      <div class="label-hdr" onclick="toggleLabel(this)">
-        <span class="label-idx">#${i}</span>
-        <span class="label-name">${escHtml(name)}</span>
-        <span class="label-caret" style="${hasText?'':'opacity:.3'}">&#9658;</span>
-      </div>
-      ${hasText?`<div class="label-body">${escHtml(text)}</div>`:''}
-    </div>`;
+  const fl=q?labels.filter(([n,t])=>n.toLowerCase().includes(q)||t.toLowerCase().includes(q)):labels;
+  if(stats)stats.textContent=q?`${fl.length} of ${labels.length} labels`:`${labels.length} labels`;
+  list.innerHTML=fl.map(([n,t],i)=>{
+    const has=t.trim().length>0;
+    return`<div class="label-item"><div class="label-hdr" onclick="toggleLabel(this)">
+      <span class="label-idx">#${i}</span>
+      <span class="label-name">${esc(n)}</span>
+      <span class="label-caret" style="${has?'':'opacity:.3'}">&#9658;</span>
+    </div>${has?`<div class="label-body">${esc(t)}</div>`:''}</div>`;
   }).join('');
 }
-
-function initPreview(labelsElId, rawElId, data, rawText){
-  const labelsEl=document.getElementById(labelsElId);
-  const rawEl=document.getElementById(rawElId);
-  if(!data.labels.length){labelsEl.innerHTML='<div class="empty-note">No labels found.</div>';return;}
-  labelsEl.innerHTML=`
-    <div class="search-bar"><input type="text" placeholder="Filter labels…" oninput="filterLabels('${labelsElId}',this.value)"></div>
-    <div class="preview-stats" id="${labelsElId}-stats">${data.labels.length} labels</div>
-    <div class="label-list" id="${labelsElId}-list"></div>`;
-  renderLabelPreview(labelsElId, labelsElId+'-stats', labelsElId+'-list', data.labels, '');
-  if(rawEl)rawEl.innerHTML=`<div class="raw-view">${escHtml(rawText)}</div>`;
+function initPrev(lid, rid, data, raw){
+  const le=document.getElementById(lid), re=document.getElementById(rid);
+  if(!data.labels.length){le.innerHTML='<div class="empty-note">No labels.</div>';return;}
+  le.innerHTML=`<div class="search-bar"><input type="text" placeholder="Filter labels…" oninput="filterLabels('${lid}',this.value)"></div>
+    <div class="preview-stats" id="${lid}-stats">${data.labels.length} labels</div>
+    <div class="label-list" id="${lid}-list"></div>`;
+  renderList(lid+'-list',lid+'-stats',data.labels,'');
+  if(re)re.innerHTML=`<div class="raw-view">${esc(raw)}</div>`;
+}
+function filterLabels(cid,q){
+  const d=cid.startsWith('dec')?decPrev:togmdPrev;
+  if(d)renderList(cid+'-list',cid+'-stats',d.labels,q.toLowerCase());
+}
+function toggleLabel(h){
+  const b=h.nextElementSibling;if(!b)return;
+  const c=h.querySelector('.label-caret');
+  const o=b.classList.toggle('open');if(c)c.classList.toggle('open',o);
+}
+function switchDecPreview(n){
+  document.querySelectorAll('#dec-out-card .preview-tab').forEach((b,i)=>b.classList.toggle('active',['labels','raw'][i]===n));
+  document.getElementById('dec-prev-labels').style.display=n==='labels'?'':'none';
+  document.getElementById('dec-prev-raw').style.display=n==='raw'?'':'none';
+}
+function switchTogmdPreview(n){
+  document.querySelectorAll('#togmd-out-card .preview-tab').forEach((b,i)=>b.classList.toggle('active',['labels','raw'][i]===n));
+  document.getElementById('togmd-prev-labels').style.display=n==='labels'?'':'none';
+  document.getElementById('togmd-prev-raw').style.display=n==='raw'?'':'none';
 }
 
-function filterLabels(containerId, q){
-  const data=containerId.startsWith('dec')?decPreviewData:togmdPreviewData;
-  if(data)renderLabelPreview(containerId,containerId+'-stats',containerId+'-list',data.labels,q);
-}
+// ── STATE ────────────────────────────────────────────────────────────────────
+let decBuf=null,decName='';
+let encTxt=null,encOut=null;
+let togmdBuf=null,togmdFName='',togmdOut=null,togmdOutName='';
+let togmdVer=1,togmdGame='dd';
 
-function toggleLabel(hdr){
-  const body=hdr.nextElementSibling;if(!body)return;
-  const caret=hdr.querySelector('.label-caret');
-  const open=body.classList.toggle('open');
-  if(caret)caret.classList.toggle('open',open);
-}
-
-function switchDecPreview(name){
-  document.querySelectorAll('#dec-out-card .preview-tab').forEach((b,i)=>b.classList.toggle('active',['labels','raw'][i]===name));
-  document.getElementById('dec-prev-labels').style.display=name==='labels'?'':'none';
-  document.getElementById('dec-prev-raw').style.display=name==='raw'?'':'none';
-}
-function switchTogmdPreview(name){
-  document.querySelectorAll('#togmd-out-card .preview-tab').forEach((b,i)=>b.classList.toggle('active',['labels','raw'][i]===name));
-  document.getElementById('togmd-prev-labels').style.display=name==='labels'?'':'none';
-  document.getElementById('togmd-prev-raw').style.display=name==='raw'?'':'none';
-}
-
-// ─────────────────────────────────────────────────────────────────────────────
-// STATE
-// ─────────────────────────────────────────────────────────────────────────────
-let decFileBuf=null,decFileName='';
-let encFileText=null,encFileName='';
-let encOutBytes=null;
-let togmdFileBuf=null,togmdFileName='';
-let togmdOutBytes=null,togmdOutName='';
-let togmdTargetVer=1;
-
-// ─────────────────────────────────────────────────────────────────────────────
-// DECODE TAB
-// ─────────────────────────────────────────────────────────────────────────────
+// ── DECODE TAB ───────────────────────────────────────────────────────────────
 setupDrop('drop-decode','dec-file-input',async f=>{
-  decFileName=f.name;
-  document.getElementById('dec-drop-text').textContent=f.name;
+  decName=f.name;document.getElementById('dec-drop-text').textContent=f.name;
   document.getElementById('dec-out-card').style.display='none';
   document.getElementById('dec-status').style.display='none';
-  decFileBuf=await readAB(f);
+  decBuf=await readAB(f);
   try{
-    const data=decodeUser2(decFileBuf);
-    setMeta('dec-meta',[['Labels',String(data.labels.length)],['Name',data.name||'—'],['Size',formatBytes(f.size)]]);
-    setStatus('dec-status',`Loaded · ${data.labels.length} labels · ${formatBytes(f.size)}`,'ok');
-  } catch(e){
-    setMeta('dec-meta',[['File',f.name],['Size',formatBytes(f.size)]]);
-    setStatus('dec-status','Loaded (parse preview failed: '+e.message+')','warn');
+    const d=decodeU2(decBuf);
+    setMeta('dec-meta',[['Labels',''+d.labels.length],['Name',d.name||'—'],['Size',fmtB(f.size)]]);
+    setStatus('dec-status',`Loaded · ${d.labels.length} labels · ${fmtB(f.size)}`,'ok');
+  }catch(e){
+    setMeta('dec-meta',[['File',f.name],['Size',fmtB(f.size)],['Labels','?']]);
+    setStatus('dec-status','Loaded (preview failed: '+e.message+')','warn');
   }
   document.getElementById('btn-decode').disabled=false;
 });
-
 async function runDecode(){
-  if(!decFileBuf){setStatus('dec-status','No file loaded','err');return;}
+  if(!decBuf){setStatus('dec-status','No file loaded','err');return;}
   setStatus('dec-status','Decoding…','');
   try{
-    const data=decodeUser2(decFileBuf);
-    const txt=dataToText(data);
-    document.getElementById('dec-preview').value=txt;
-    document.getElementById('dec-dl-meta').textContent=baseName(decFileName)+'.txt · '+formatBytes(new Blob([txt]).size);
+    const data=decodeU2(decBuf);
+    const json=JSON.stringify(data,null,2)+'\n';
+    document.getElementById('dec-preview').value=json;
+    document.getElementById('dec-dl-meta').textContent=base(decName)+'.json · '+fmtB(new Blob([json]).size);
     document.getElementById('dec-out-card').style.display='';
-    decPreviewData=data;
-    initPreview('dec-prev-labels','dec-prev-raw',data,txt);
+    decPrev=data;initPrev('dec-prev-labels','dec-prev-raw',data,json);
     setStatus('dec-status',`Decoded · ${data.labels.length} labels`,'ok');
-  } catch(e){setStatus('dec-status','Error: '+e.message,'err');console.error(e);}
+  }catch(e){setStatus('dec-status','Error: '+e.message,'err');console.error(e);}
 }
-
 function dlDecoded(){
-  const txt=document.getElementById('dec-preview').value;
-  dlBlob(new Blob([txt],{type:'text/plain'}),baseName(decFileName)+'.txt');
+  dlBlob(new Blob([document.getElementById('dec-preview').value],{type:'application/json'}),base(decName)+'.json');
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// ENCODE TAB
-// ─────────────────────────────────────────────────────────────────────────────
+// ── ENCODE TAB ───────────────────────────────────────────────────────────────
 setupDrop('drop-encode','enc-file-input',async f=>{
-  encFileName=f.name;
   document.getElementById('enc-drop-text').textContent=f.name;
   document.getElementById('enc-out-card').style.display='none';
   document.getElementById('enc-status').style.display='none';
-  encFileText=await readTxt(f);
-  setStatus('enc-status','Loaded '+f.name+' · '+formatBytes(f.size),'ok');
+  encTxt=await readTxt(f);
+  try{
+    const d=JSON.parse(encTxt);
+    if(typeof d.name!=='string'||!Array.isArray(d.labels))throw new Error('Invalid structure');
+    setStatus('enc-status',`Loaded · ${d.labels.length} labels · ${fmtB(f.size)}`,'ok');
+  }catch(e){setStatus('enc-status','Loaded (JSON parse failed: '+e.message+')','warn');}
   document.getElementById('btn-encode').disabled=false;
 });
-
 async function runEncode(){
-  if(!encFileText){setStatus('enc-status','No file loaded','err');return;}
+  if(!encTxt){setStatus('enc-status','No file loaded','err');return;}
   setStatus('enc-status','Encoding…','');
   try{
-    const data=textToData(encFileText);
-    encOutBytes=encodeUser2(data);
-    const outName=document.getElementById('enc-out-name').value||'user.2.en';
-    document.getElementById('enc-dl-meta').textContent=outName+' · '+formatBytes(encOutBytes.length);
+    const data=JSON.parse(encTxt);
+    if(typeof data.name!=='string'||!Array.isArray(data.labels))
+      throw new Error('JSON must have { "name": string, "labels": [[label,text],...] }');
+    for(const l of data.labels)
+      if(!Array.isArray(l)||l.length!==2||typeof l[0]!=='string'||typeof l[1]!=='string')
+        throw new Error('Each entry must be a [string,string] pair');
+    encOut=encodeU2(data);
+    const n=document.getElementById('enc-out-name').value||'user.2.en';
+    document.getElementById('enc-dl-meta').textContent=n+' · '+fmtB(encOut.length);
     document.getElementById('enc-out-card').style.display='';
-    setStatus('enc-status',`Encoded · ${data.labels.length} labels → ${outName}`,'ok');
-  } catch(e){setStatus('enc-status','Error: '+e.message,'err');console.error(e);}
+    setStatus('enc-status',`Encoded · ${data.labels.length} labels → ${n}`,'ok');
+  }catch(e){setStatus('enc-status','Error: '+e.message,'err');console.error(e);}
 }
-
 function dlEncoded(){
-  if(!encOutBytes)return;
-  const outName=document.getElementById('enc-out-name').value||'user.2.en';
-  dlBlob(new Blob([encOutBytes],{type:'application/octet-stream'}),outName);
+  if(!encOut)return;
+  dlBlob(new Blob([encOut],{type:'application/octet-stream'}),document.getElementById('enc-out-name').value||'user.2.en');
 }
 
-// ─────────────────────────────────────────────────────────────────────────────
-// USER.2 → GMD TAB
-// ─────────────────────────────────────────────────────────────────────────────
+// ── USER.2 → GMD TAB ─────────────────────────────────────────────────────────
 function setTogmdVer(v){
-  togmdTargetVer=v;
+  togmdVer=v;
   document.getElementById('togmd-v1-btn').classList.toggle('active',v===1);
   document.getElementById('togmd-v2-btn').classList.toggle('active',v===2);
   document.getElementById('togmd-xor-note').textContent=v===1
     ?'V1 (GS5 / Dual Destinies) — XOR encryption will be applied.'
     :'V2 (GS6 / Spirit of Justice) — no XOR encryption applied.';
 }
-
+function setTogmdGame(g){
+  togmdGame=g;
+  document.getElementById('togmd-dd-btn').classList.toggle('active',g==='dd');
+  document.getElementById('togmd-soj-btn').classList.toggle('active',g==='soj');
+}
 setupDrop('drop-togmd','togmd-file-input',async f=>{
-  togmdFileName=f.name;
-  document.getElementById('togmd-drop-text').textContent=f.name;
+  togmdFName=f.name;document.getElementById('togmd-drop-text').textContent=f.name;
   document.getElementById('togmd-out-card').style.display='none';
   document.getElementById('togmd-status').style.display='none';
-  togmdFileBuf=await readAB(f);
-  // auto-fill GMD name from filename
-  const base=baseName(f.name);
+  togmdBuf=await readAB(f);
+  const b=base(f.name);
   if(!document.getElementById('togmd-gmd-name').value)
-    document.getElementById('togmd-gmd-name').value=base;
+    document.getElementById('togmd-gmd-name').value=b;
   try{
-    const data=decodeUser2(togmdFileBuf);
-    setMeta('togmd-meta',[['Labels',String(data.labels.length)],['Name',data.name||'—'],['Size',formatBytes(f.size)]]);
-    setStatus('togmd-status',`Loaded · ${data.labels.length} labels · ${formatBytes(f.size)}`,'ok');
-  } catch(e){
-    setMeta('togmd-meta',[['File',f.name],['Size',formatBytes(f.size)]]);
-    setStatus('togmd-status','Loaded (parse preview failed: '+e.message+')','warn');
+    const d=decodeU2(togmdBuf);
+    setMeta('togmd-meta',[['Labels',''+d.labels.length],['Name',d.name||'—'],['Size',fmtB(f.size)]]);
+    setStatus('togmd-status',`Loaded · ${d.labels.length} labels · ${fmtB(f.size)}`,'ok');
+  }catch(e){
+    setMeta('togmd-meta',[['File',f.name],['Size',fmtB(f.size)],['Labels','?']]);
+    setStatus('togmd-status','Loaded (parse failed: '+e.message+')','warn');
   }
   document.getElementById('btn-togmd').disabled=false;
 });
-
 async function runToGmd(){
-  if(!togmdFileBuf){setStatus('togmd-status','No file loaded','err');return;}
-  setStatus('togmd-status','Stage 1/2: Reading user.2 binary…','');
+  if(!togmdBuf){setStatus('togmd-status','No file loaded','err');return;}
+  setStatus('togmd-status','Stage 1/2: Decoding user.2…','');
   try{
-    const data=decodeUser2(togmdFileBuf);
-    const gmdName=document.getElementById('togmd-gmd-name').value.trim()||baseName(togmdFileName);
-    const language=document.getElementById('togmd-lang').value;
-    const version=togmdTargetVer;
-
-    setStatus('togmd-status','Stage 2/2: Building GMD binary…','');
-    togmdOutBytes=buildGmd(data.labels,gmdName,language,version);
+    const data=decodeU2(togmdBuf);
+    const gmdName=document.getElementById('togmd-gmd-name').value.trim()||base(togmdFName);
+    const lang=document.getElementById('togmd-lang').value;
+    const isSOJ=togmdGame==='soj';
+    setStatus('togmd-status','Stage 2/2: Building GMD…','');
+    togmdOut=buildGmd(data.labels,gmdName,lang,togmdVer,isSOJ);
     togmdOutName=gmdName+'.gmd';
-
-    const xorNote=version===1?' · XOR encrypted':'';
-    document.getElementById('togmd-dl-meta').textContent=togmdOutName+' · GMD V'+version+' · '+formatBytes(togmdOutBytes.length)+xorNote;
+    const xn=togmdVer===1?' · XOR encrypted':'';
+    document.getElementById('togmd-dl-meta').textContent=togmdOutName+' · GMD V'+togmdVer+' · '+fmtB(togmdOut.length)+xn;
     document.getElementById('togmd-out-card').style.display='';
-
-    togmdPreviewData=data;
-    const rawText=data.labels.map(([l,t],i)=>`[${i}] ${l}\n${t}`).join('\n\n');
-    initPreview('togmd-prev-labels','togmd-prev-raw',data,rawText);
-
-    setStatus('togmd-status',`Done · ${data.labels.length} labels · GMD V${version} · ${togmdOutName}`,'ok');
-  } catch(e){setStatus('togmd-status','Error: '+e.message,'err');console.error(e);}
+    togmdPrev=data;
+    initPrev('togmd-prev-labels','togmd-prev-raw',data,data.labels.map(([l,t],i)=>`[${i}] ${l}\n${t}`).join('\n\n'));
+    setStatus('togmd-status',`Done · ${data.labels.length} labels · GMD V${togmdVer} · ${togmdOutName}`,'ok');
+  }catch(e){setStatus('togmd-status','Error: '+e.message,'err');console.error(e);}
 }
-
 function dlTogmd(){
-  if(!togmdOutBytes)return;
-  dlBlob(new Blob([togmdOutBytes],{type:'application/octet-stream'}),togmdOutName||'output.gmd');
+  if(!togmdOut)return;
+  dlBlob(new Blob([togmdOut],{type:'application/octet-stream'}),togmdOutName||'output.gmd');
 }
 </script>
 </body>
