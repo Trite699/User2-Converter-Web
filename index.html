@@ -3,937 +3,830 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AAI1 ROM Extractor — Miles Edgeworth</title>
-<link rel="preconnect" href="https://fonts.googleapis.com">
-<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<title>cpac2d.bin Extractor</title>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
   :root {
-    --bg: #0a0a0f;
-    --surface: #12121a;
-    --surface2: #1a1a26;
-    --border: rgba(255,255,255,0.08);
-    --border2: rgba(255,255,255,0.15);
-    --text: #e8e8f0;
-    --muted: #888899;
-    --accent: #c8a84b;
-    --accent2: #e8c870;
-    --red: #e05555;
-    --blue: #5588e0;
-    --green: #55c08a;
-    --purple: #9966ff;
-    --teal: #44ccbb;
-    --font: 'Syne', sans-serif;
-    --mono: 'JetBrains Mono', monospace;
+    --bg: #0d0f14;
+    --surface: #161920;
+    --surface2: #1e2230;
+    --border: #2a2f3d;
+    --accent: #ff6b35;
+    --accent2: #ff9a6c;
+    --text: #e8eaf0;
+    --muted: #7a8099;
+    --success: #4ecdc4;
+    --danger: #ff4757;
+    --card-bg: #12151e;
   }
   * { box-sizing: border-box; margin: 0; padding: 0; }
   body {
     background: var(--bg);
     color: var(--text);
-    font-family: var(--font);
+    font-family: 'Courier New', monospace;
     min-height: 100vh;
-    overflow-x: hidden;
+  }
+  .scanline {
+    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
+    pointer-events: none; z-index: 0;
+    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 4px);
+  }
+  .container { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem; position: relative; z-index: 1; }
+  header { text-align: center; margin-bottom: 3rem; }
+  .logo {
+    font-size: 2.8rem; font-weight: 900; letter-spacing: -1px;
+    color: var(--accent);
+    text-shadow: 0 0 40px rgba(255,107,53,0.3);
+    font-family: 'Courier New', monospace;
+  }
+  .logo span { color: var(--text); }
+  .subtitle {
+    font-size: 0.78rem; letter-spacing: 0.25em; color: var(--muted);
+    text-transform: uppercase; margin-top: 0.5rem;
+  }
+  .badge {
+    display: inline-block; background: var(--surface2); border: 1px solid var(--border);
+    font-size: 0.7rem; padding: 2px 10px; border-radius: 2px; color: var(--accent);
+    letter-spacing: 0.1em; margin-top: 0.75rem;
   }
 
-  /* ── HEADER ── */
-  header {
-    border-bottom: 1px solid var(--border);
-    padding: 0 2rem;
-    background: var(--surface);
-    position: sticky; top: 0; z-index: 100;
-    display: flex; align-items: center; justify-content: space-between;
-    height: 56px;
-  }
-  .logo { display: flex; align-items: center; gap: 10px; }
-  .logo-badge {
-    background: var(--accent);
-    color: #0a0a0f;
-    font-size: 10px;
-    font-weight: 700;
-    letter-spacing: 1px;
-    padding: 3px 7px;
-    border-radius: 3px;
-  }
-  .logo-text { font-size: 14px; font-weight: 600; letter-spacing: 0.5px; }
-  .logo-sub { font-size: 11px; color: var(--muted); font-weight: 400; }
-  .header-right { font-size: 11px; color: var(--muted); font-family: var(--mono); }
-
-  /* ── MAIN LAYOUT ── */
-  main { display: grid; grid-template-columns: 1fr; max-width: 1100px; margin: 0 auto; padding: 2rem; gap: 1.5rem; }
-
-  /* ── SECTION TITLES ── */
-  .section-label {
-    font-size: 10px; font-weight: 700; letter-spacing: 2px;
-    color: var(--accent); text-transform: uppercase; margin-bottom: 0.75rem;
-  }
-
-  /* ── DROP ZONE ── */
-  #dropzone {
-    border: 1px dashed var(--border2);
-    border-radius: 12px;
-    background: var(--surface);
-    padding: 3rem 2rem;
+  .drop-zone {
+    border: 2px dashed var(--border);
+    border-radius: 8px;
+    padding: 4rem 2rem;
     text-align: center;
     cursor: pointer;
     transition: all 0.2s;
+    background: var(--card-bg);
     position: relative;
+    overflow: hidden;
   }
-  #dropzone:hover, #dropzone.drag-over {
+  .drop-zone::before {
+    content: '';
+    position: absolute; top: 0; left: -100%;
+    width: 60%; height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(255,107,53,0.04), transparent);
+    animation: sweep 3s ease-in-out infinite;
+  }
+  @keyframes sweep { 0%{left:-60%} 100%{left:120%} }
+  .drop-zone:hover, .drop-zone.over {
     border-color: var(--accent);
-    background: rgba(200,168,75,0.05);
+    background: rgba(255,107,53,0.04);
   }
-  #dropzone input[type="file"] {
-    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  .drop-icon {
+    font-size: 3.5rem; display: block; margin-bottom: 1rem;
+    color: var(--accent); filter: drop-shadow(0 0 12px rgba(255,107,53,0.4));
   }
-  .drop-icon { font-size: 40px; margin-bottom: 1rem; opacity: 0.5; }
-  .drop-title { font-size: 18px; font-weight: 700; margin-bottom: 0.5rem; }
-  .drop-sub { font-size: 13px; color: var(--muted); font-family: var(--mono); }
-  .drop-badge {
-    display: inline-block; margin-top: 1rem;
-    background: var(--surface2); border: 1px solid var(--border2);
-    padding: 4px 12px; border-radius: 20px;
-    font-size: 11px; color: var(--accent); font-family: var(--mono);
-  }
+  .drop-title { font-size: 1.1rem; color: var(--text); margin-bottom: 0.5rem; }
+  .drop-sub { font-size: 0.8rem; color: var(--muted); }
+  input[type=file] { display: none; }
 
-  /* ── ROM INFO BAR ── */
-  #rominfo {
-    display: none;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 1rem 1.25rem;
+  .stats-bar {
+    display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px;
+    background: var(--border); border: 1px solid var(--border);
+    border-radius: 6px; overflow: hidden; margin: 1.5rem 0;
   }
-  .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px,1fr)); gap: 1rem; }
-  .info-item label { font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; display: block; margin-bottom: 3px; }
-  .info-item span { font-size: 13px; font-family: var(--mono); color: var(--accent2); }
+  .stat {
+    background: var(--surface); padding: 0.75rem 1rem;
+    text-align: center;
+  }
+  .stat-val { font-size: 1.4rem; color: var(--accent); font-weight: 900; }
+  .stat-label { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.15em; }
 
-  /* ── FILTER BAR ── */
-  #filterbar {
-    display: none;
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 1rem 1.25rem;
-    gap: 1rem;
-    flex-wrap: wrap;
-    align-items: center;
+  .controls {
+    display: flex; gap: 0.75rem; align-items: center;
+    flex-wrap: wrap; margin-bottom: 1.5rem;
   }
-  .filter-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
-  .filter-label { font-size: 11px; color: var(--muted); white-space: nowrap; }
-  .type-btn {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    color: var(--muted);
-    font-family: var(--mono);
-    font-size: 11px;
-    padding: 4px 10px;
-    border-radius: 20px;
-    cursor: pointer;
-    transition: all 0.15s;
-    white-space: nowrap;
+  .btn {
+    padding: 0.5rem 1.25rem; border-radius: 4px; cursor: pointer;
+    font-family: 'Courier New', monospace; font-size: 0.8rem; letter-spacing: 0.05em;
+    border: 1px solid var(--border); transition: all 0.15s; text-transform: uppercase;
   }
-  .type-btn:hover { border-color: var(--border2); color: var(--text); }
-  .type-btn.active { background: var(--accent); border-color: var(--accent); color: #0a0a0f; font-weight: 600; }
-  #search-input {
-    background: var(--surface2);
-    border: 1px solid var(--border);
-    color: var(--text);
-    font-family: var(--mono);
-    font-size: 12px;
-    padding: 5px 12px;
-    border-radius: 6px;
-    width: 220px;
+  .btn-primary {
+    background: var(--accent); color: #fff; border-color: var(--accent);
+  }
+  .btn-primary:hover { background: var(--accent2); border-color: var(--accent2); }
+  .btn-ghost { background: transparent; color: var(--text); }
+  .btn-ghost:hover { background: var(--surface2); border-color: var(--muted); }
+  .btn-danger { background: transparent; color: var(--danger); border-color: var(--danger); }
+  .btn-danger:hover { background: rgba(255,71,87,0.08); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+
+  .search-box {
+    flex: 1; min-width: 180px;
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 4px; padding: 0.5rem 0.75rem;
+    color: var(--text); font-family: 'Courier New', monospace; font-size: 0.8rem;
     outline: none;
   }
-  #search-input:focus { border-color: var(--accent); }
-  #search-input::placeholder { color: var(--muted); }
+  .search-box:focus { border-color: var(--accent); }
+  .search-box::placeholder { color: var(--muted); }
 
-  /* ── STATS BAR ── */
-  #statsbar { display: none; }
-  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px,1fr)); gap: 10px; }
-  .stat-card {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 8px;
-    padding: 0.75rem 1rem;
+  .progress-wrap {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 4px; height: 6px; overflow: hidden; margin-bottom: 1.5rem;
   }
-  .stat-card .s-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
-  .stat-card .s-val { font-size: 20px; font-weight: 700; }
-  .stat-card .s-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
-  .c-bin { color: var(--blue); }
-  .c-img { color: var(--purple); }
-  .c-snd { color: var(--green); }
-  .c-arc { color: var(--accent); }
-  .c-other { color: var(--muted); }
+  .progress-bar {
+    height: 100%; background: var(--accent); width: 0%;
+    transition: width 0.2s; box-shadow: 0 0 8px rgba(255,107,53,0.5);
+  }
 
-  /* ── FILE TREE ── */
-  #filepanel { display: none; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
-  .panel-header {
-    display: flex; align-items: center; justify-content: space-between;
-    padding: 0.75rem 1.25rem;
+  .log {
+    background: var(--card-bg); border: 1px solid var(--border);
+    border-radius: 6px; padding: 0.75rem 1rem; margin-bottom: 1.5rem;
+    font-size: 0.72rem; color: var(--muted); max-height: 90px; overflow-y: auto;
+    line-height: 1.7;
+  }
+  .log .ok { color: var(--success); }
+  .log .err { color: var(--danger); }
+  .log .info { color: var(--accent); }
+
+  .grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: 8px;
+  }
+  .tile {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 6px; padding: 6px; cursor: pointer;
+    transition: all 0.15s; position: relative; overflow: hidden;
+  }
+  .tile:hover {
+    border-color: var(--accent);
+    box-shadow: 0 0 16px rgba(255,107,53,0.15);
+    transform: translateY(-1px);
+  }
+  .tile.selected { border-color: var(--accent); background: rgba(255,107,53,0.06); }
+  .tile-img {
+    width: 100%; aspect-ratio: 1;
+    image-rendering: pixelated;
+    display: block; border-radius: 3px;
+    background: #090b10;
+  }
+  .tile-name {
+    font-size: 0.6rem; color: var(--muted); margin-top: 4px;
+    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+    text-align: center;
+  }
+  .tile-dim {
+    font-size: 0.55rem; color: var(--accent); text-align: center;
+  }
+  .tile-sel {
+    position: absolute; top: 4px; right: 4px;
+    width: 14px; height: 14px; border-radius: 50%;
+    background: var(--accent); display: none;
+    align-items: center; justify-content: center; font-size: 9px; color: #fff;
+  }
+  .tile.selected .tile-sel { display: flex; }
+
+  .empty {
+    text-align: center; padding: 4rem; color: var(--muted); font-size: 0.8rem;
+  }
+
+  #lightbox {
+    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.88);
+    z-index: 999; align-items: center; justify-content: center;
+    padding: 1rem;
+  }
+  #lightbox.open { display: flex; }
+  .lb-box {
+    background: var(--surface); border: 1px solid var(--border);
+    border-radius: 8px; max-width: 520px; width: 100%; padding: 1.5rem;
+  }
+  .lb-img {
+    image-rendering: pixelated;
+    max-width: 100%; max-height: 350px; display: block;
+    margin: 0 auto; background: #090b10; border-radius: 4px;
+  }
+  .lb-meta {
+    margin-top: 1rem; font-size: 0.72rem; color: var(--muted);
+    display: grid; grid-template-columns: 1fr 1fr; gap: 4px;
+  }
+  .lb-meta span { color: var(--text); }
+  .lb-actions { display: flex; gap: 0.5rem; margin-top: 1rem; justify-content: flex-end; }
+  .lb-close {
+    position: absolute; top: 1rem; right: 1.5rem;
+    background: none; border: none; color: var(--muted);
+    font-size: 1.5rem; cursor: pointer; z-index: 1000;
+  }
+
+  ::-webkit-scrollbar { width: 4px; }
+  ::-webkit-scrollbar-track { background: transparent; }
+  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+
+  .section-header {
+    display: flex; align-items: center; gap: 0.5rem;
+    font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.2em;
+    color: var(--muted); margin-bottom: 1rem; padding-bottom: 0.5rem;
     border-bottom: 1px solid var(--border);
-    background: var(--surface2);
   }
-  .panel-title { font-size: 13px; font-weight: 600; }
-  .panel-actions { display: flex; gap: 8px; }
-  .btn {
-    background: transparent;
-    border: 1px solid var(--border2);
-    color: var(--text);
-    font-family: var(--font);
-    font-size: 11px;
-    font-weight: 600;
-    padding: 5px 14px;
-    border-radius: 6px;
-    cursor: pointer;
-    transition: all 0.15s;
-    letter-spacing: 0.5px;
+  .section-header::before {
+    content: ''; width: 3px; height: 14px;
+    background: var(--accent); display: block; border-radius: 2px;
   }
-  .btn:hover { background: var(--surface2); border-color: var(--accent); color: var(--accent); }
-  .btn.primary { background: var(--accent); border-color: var(--accent); color: #0a0a0f; }
-  .btn.primary:hover { background: var(--accent2); border-color: var(--accent2); }
-  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
-  .file-table { width: 100%; border-collapse: collapse; font-size: 12px; }
-  .file-table thead th {
-    text-align: left; padding: 8px 12px;
-    font-size: 10px; letter-spacing: 1px; color: var(--muted);
-    text-transform: uppercase; border-bottom: 1px solid var(--border);
-    background: var(--surface2); position: sticky; top: 0;
-    cursor: pointer; user-select: none;
-  }
-  .file-table thead th:hover { color: var(--accent); }
-  .file-table tbody tr { border-bottom: 1px solid rgba(255,255,255,0.03); transition: background 0.1s; }
-  .file-table tbody tr:hover { background: rgba(200,168,75,0.04); }
-  .file-table td { padding: 7px 12px; }
-  .file-table td:last-child { text-align: right; }
-  .td-check { width: 32px; text-align: center !important; }
-  .td-check input { cursor: pointer; accent-color: var(--accent); width: 13px; height: 13px; }
-  .file-name { font-family: var(--mono); color: var(--text); }
-  .file-path { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-top: 2px; }
-  .type-badge {
-    font-family: var(--mono); font-size: 10px; padding: 2px 7px;
-    border-radius: 3px; font-weight: 500; display: inline-block;
-    background: rgba(255,255,255,0.05); border: 1px solid var(--border);
-  }
-  .size-cell { font-family: var(--mono); color: var(--muted); font-size: 11px; }
-  .id-cell { font-family: var(--mono); font-size: 10px; color: var(--muted); }
-  #file-container { max-height: 460px; overflow-y: auto; }
-  #file-container::-webkit-scrollbar { width: 4px; }
-  #file-container::-webkit-scrollbar-track { background: transparent; }
-  #file-container::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
-
-  /* ── PROGRESS ── */
-  #progress-section { display: none; }
-  .progress-bar-wrap {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 10px;
-    padding: 1.25rem;
-  }
-  .progress-title { font-size: 13px; font-weight: 600; margin-bottom: 0.75rem; }
-  .prog-track { background: var(--surface2); border-radius: 4px; height: 6px; overflow: hidden; margin-bottom: 8px; }
-  .prog-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width 0.1s; border-radius: 4px; }
-  .prog-label { font-size: 11px; color: var(--muted); font-family: var(--mono); }
-
-  /* ── NARC MODAL ── */
-  #narc-modal {
-    display: none; position: fixed; inset: 0; z-index: 200;
-    background: rgba(0,0,0,0.7); align-items: center; justify-content: center;
-  }
-  #narc-modal.open { display: flex; }
-  .modal-box {
-    background: var(--surface); border: 1px solid var(--border2);
-    border-radius: 12px; padding: 1.5rem; width: 90%; max-width: 540px;
-    max-height: 80vh; overflow-y: auto;
-  }
-  .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
-  .modal-title { font-size: 16px; font-weight: 700; }
-  .modal-close { background: none; border: none; color: var(--muted); font-size: 20px; cursor: pointer; line-height: 1; }
-  .modal-close:hover { color: var(--text); }
-  .narc-file-list { font-family: var(--mono); font-size: 11px; }
-  .narc-file-item { padding: 6px 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
-  .narc-file-item:last-child { border-bottom: none; }
-
-  /* ── TOOLTIP ── */
-  .tooltip { position: relative; }
-  .tooltip:hover::after {
-    content: attr(data-tip);
-    position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%);
-    background: var(--surface2); border: 1px solid var(--border2);
-    font-size: 11px; padding: 4px 8px; border-radius: 4px; white-space: nowrap;
-    color: var(--text); pointer-events: none; z-index: 50;
-    font-family: var(--mono);
-  }
-
-  /* ── FOOTER ── */
-  footer { text-align: center; padding: 2rem; font-size: 11px; color: var(--muted); font-family: var(--mono); border-top: 1px solid var(--border); margin-top: 1rem; }
-
-  /* ── EMPTY STATE ── */
-  .empty-state { padding: 3rem; text-align: center; color: var(--muted); font-size: 13px; }
-
-  /* Type colors */
-  .t-bin { color: var(--blue); border-color: rgba(85,136,224,0.3); background: rgba(85,136,224,0.08); }
-  .t-narc { color: var(--accent); border-color: rgba(200,168,75,0.3); background: rgba(200,168,75,0.08); }
-  .t-sdat { color: var(--green); border-color: rgba(85,192,138,0.3); background: rgba(85,192,138,0.08); }
-  .t-ncgr, .t-nclr, .t-nscr { color: var(--purple); border-color: rgba(153,102,255,0.3); background: rgba(153,102,255,0.08); }
-  .t-nsbtx { color: var(--teal); border-color: rgba(68,204,187,0.3); background: rgba(68,204,187,0.08); }
-  .t-mod { color: var(--red); border-color: rgba(224,85,85,0.3); background: rgba(224,85,85,0.08); }
-  .t-arm { color: #ff9955; border-color: rgba(255,153,85,0.3); background: rgba(255,153,85,0.08); }
-  .t-other { color: var(--muted); }
-
-  select { background: var(--surface2); border: 1px solid var(--border); color: var(--text); font-family: var(--mono); font-size: 11px; padding: 4px 8px; border-radius: 6px; outline: none; }
-  select:focus { border-color: var(--accent); }
+  .hidden { display: none !important; }
 </style>
 </head>
 <body>
-
-<header>
-  <div class="logo">
-    <span class="logo-badge">AAI-1</span>
-    <div>
-      <div class="logo-text">ROM Extractor</div>
-      <div class="logo-sub">Ace Attorney Investigations: Miles Edgeworth</div>
+<div class="scanline"></div>
+<div id="lightbox">
+  <button class="lb-close" onclick="closeLightbox()">×</button>
+  <div class="lb-box">
+    <canvas id="lb-canvas" class="lb-img"></canvas>
+    <div class="lb-meta" id="lb-meta"></div>
+    <div class="lb-actions">
+      <button class="btn btn-ghost" onclick="closeLightbox()">close</button>
+      <button class="btn btn-primary" onclick="downloadCurrent()">↓ save png</button>
     </div>
-  </div>
-  <div class="header-right">NDS NitroROM · NARC · BIN · SDAT</div>
-</header>
-
-<main>
-
-  <!-- DROP ZONE -->
-  <div>
-    <div class="section-label">Load ROM</div>
-    <div id="dropzone">
-      <input type="file" id="file-input" accept=".nds,.rom" />
-      <div class="drop-icon">📦</div>
-      <div class="drop-title">Drop your .nds ROM here</div>
-      <div class="drop-sub">or click to browse</div>
-      <div class="drop-badge">.nds · .rom · NitroROM format</div>
-    </div>
-  </div>
-
-  <!-- ROM INFO -->
-  <div id="rominfo">
-    <div class="section-label">ROM Header</div>
-    <div class="info-grid">
-      <div class="info-item"><label>Game Title</label><span id="i-title">—</span></div>
-      <div class="info-item"><label>Game Code</label><span id="i-code">—</span></div>
-      <div class="info-item"><label>Maker Code</label><span id="i-maker">—</span></div>
-      <div class="info-item"><label>ROM Size</label><span id="i-size">—</span></div>
-      <div class="info-item"><label>File Count</label><span id="i-count">—</span></div>
-      <div class="info-item"><label>ARM9 Offset</label><span id="i-arm9">—</span></div>
-    </div>
-  </div>
-
-  <!-- STATS BAR -->
-  <div id="statsbar">
-    <div class="section-label">File Breakdown</div>
-    <div class="stats-grid">
-      <div class="stat-card"><div class="s-label">Binary / Code</div><div class="s-val c-bin" id="cnt-bin">0</div><div class="s-sub">.bin .mod</div></div>
-      <div class="stat-card"><div class="s-label">Graphics</div><div class="s-val c-img" id="cnt-img">0</div><div class="s-sub">.ncgr .nclr .nscr .nsbtx</div></div>
-      <div class="stat-card"><div class="s-label">Audio</div><div class="s-val c-snd" id="cnt-snd">0</div><div class="s-sub">.sdat .sseq .swar</div></div>
-      <div class="stat-card"><div class="s-label">Archives</div><div class="s-val c-arc" id="cnt-arc">0</div><div class="s-sub">.narc .arc .carc</div></div>
-      <div class="stat-card"><div class="s-label">ARM Code</div><div class="s-val" style="color:#ff9955" id="cnt-arm">0</div><div class="s-sub">arm9 arm7 overlays</div></div>
-      <div class="stat-card"><div class="s-label">Other</div><div class="s-val c-other" id="cnt-other">0</div><div class="s-sub">misc files</div></div>
-    </div>
-  </div>
-
-  <!-- FILTER BAR -->
-  <div id="filterbar">
-    <div class="filter-group">
-      <span class="filter-label">Filter:</span>
-      <button class="type-btn active" data-type="all">All</button>
-      <button class="type-btn" data-type="binary">Binary</button>
-      <button class="type-btn" data-type="graphics">Graphics</button>
-      <button class="type-btn" data-type="audio">Audio</button>
-      <button class="type-btn" data-type="archive">Archive</button>
-      <button class="type-btn" data-type="arm">ARM Code</button>
-    </div>
-    <div class="filter-group">
-      <input type="text" id="search-input" placeholder="Search filename…" />
-      <select id="sort-select">
-        <option value="id">Sort: ID</option>
-        <option value="name">Sort: Name</option>
-        <option value="size-desc">Sort: Size ↓</option>
-        <option value="size-asc">Sort: Size ↑</option>
-        <option value="type">Sort: Type</option>
-      </select>
-    </div>
-  </div>
-
-  <!-- FILE LIST PANEL -->
-  <div id="filepanel">
-    <div class="panel-header">
-      <div class="panel-title" id="panel-title">Files</div>
-      <div class="panel-actions">
-        <button class="btn" id="select-all-btn">Select All</button>
-        <button class="btn" id="select-none-btn">None</button>
-        <button class="btn primary" id="extract-btn">⬇ Extract Selected</button>
-        <button class="btn" id="extract-all-btn">⬇ Extract All</button>
-      </div>
-    </div>
-    <div id="file-container">
-      <table class="file-table">
-        <thead>
-          <tr>
-            <th class="td-check"><input type="checkbox" id="master-check"/></th>
-            <th>File</th>
-            <th>Type</th>
-            <th>Size</th>
-            <th>ID</th>
-          </tr>
-        </thead>
-        <tbody id="file-tbody"></tbody>
-      </table>
-    </div>
-  </div>
-
-  <!-- PROGRESS -->
-  <div id="progress-section">
-    <div class="progress-bar-wrap">
-      <div class="progress-title" id="prog-title">Processing…</div>
-      <div class="prog-track"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
-      <div class="prog-label" id="prog-label">0 / 0 files</div>
-    </div>
-  </div>
-
-</main>
-
-<!-- NARC MODAL -->
-<div id="narc-modal">
-  <div class="modal-box">
-    <div class="modal-header">
-      <div class="modal-title" id="modal-title">NARC Contents</div>
-      <button class="modal-close" id="modal-close">✕</button>
-    </div>
-    <div id="narc-content"></div>
   </div>
 </div>
 
-<footer>
-  AAI-1 NDS ROM Extractor · NitroROM filesystem · NARC · ARM9/ARM7 · SDAT · graphics formats<br>
-  Extracts all files into a ZIP preserving directory structure
-</footer>
+<div class="container">
+  <header>
+    <div class="logo">cpac<span>2d</span>.bin</div>
+    <div class="subtitle">Apollo Justice — 2D Asset Extractor</div>
+    <div class="badge">NDS · Capcom Archive Format</div>
+  </header>
+
+  <div id="upload-zone">
+    <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
+      <span class="drop-icon">📦</span>
+      <div class="drop-title">drop cpac2d.bin here</div>
+      <div class="drop-sub">or click to browse · accepts any .bin Capcom 2D archive</div>
+    </div>
+    <input type="file" id="file-input" accept=".bin">
+  </div>
+
+  <div id="result-zone" class="hidden">
+    <div class="stats-bar">
+      <div class="stat"><div class="stat-val" id="stat-total">0</div><div class="stat-label">images</div></div>
+      <div class="stat"><div class="stat-val" id="stat-ok">0</div><div class="stat-label">decoded</div></div>
+      <div class="stat"><div class="stat-val" id="stat-err">0</div><div class="stat-label">errors</div></div>
+      <div class="stat"><div class="stat-val" id="stat-size">—</div><div class="stat-label">file size</div></div>
+    </div>
+
+    <div class="log" id="log"></div>
+
+    <div class="progress-wrap hidden" id="prog-wrap">
+      <div class="progress-bar" id="progress-bar"></div>
+    </div>
+
+    <div class="controls">
+      <input type="text" class="search-box" id="search" placeholder="filter by name or dimensions…">
+      <button class="btn btn-primary" id="btn-zip" onclick="downloadZip()">↓ download all as .zip</button>
+      <button class="btn btn-ghost" onclick="selectAll()">select all</button>
+      <button class="btn btn-ghost" onclick="selectNone()">deselect all</button>
+      <button class="btn btn-primary" id="btn-sel-zip" onclick="downloadSelected()" disabled>↓ download selected</button>
+      <button class="btn btn-danger" onclick="resetTool()">× reset</button>
+    </div>
+
+    <div class="section-header" id="grid-header">extracted images</div>
+    <div class="grid" id="image-grid"></div>
+  </div>
+</div>
 
 <script>
-/* ═══════════════════════════════════════════════════════════════════
-   NDS ROM PARSER — NitroROM Filesystem
-   Based on GBATEK NDS format documentation
-═══════════════════════════════════════════════════════════════════ */
+const images = [];
+let lbIdx = -1;
 
-let romBuffer = null;
-let allFiles = [];
-let filteredFiles = [];
-let activeType = 'all';
-let sortMode = 'id';
-
-const $ = id => document.getElementById(id);
-
-// ── Utils ──
-function readU32LE(buf, off) {
-  const v = new DataView(buf);
-  return v.getUint32(off, true);
-}
-function readU16LE(buf, off) {
-  const v = new DataView(buf);
-  return v.getUint16(off, true);
-}
-function readStr(buf, off, len) {
-  const bytes = new Uint8Array(buf, off, len);
-  let s = '';
-  for (let b of bytes) { if (b === 0) break; s += String.fromCharCode(b); }
-  return s;
-}
-function fmtSize(n) {
-  if (n < 1024) return n + ' B';
-  if (n < 1048576) return (n/1024).toFixed(1) + ' KB';
-  return (n/1048576).toFixed(2) + ' MB';
-}
-function guessExt(buf, off, size) {
-  if (size < 4) return 'bin';
-  const b = new Uint8Array(buf, off, Math.min(8, size));
-  const h = (b[0]<<24)|(b[1]<<16)|(b[2]<<8)|b[3];
-  // NARC: "NARC" = 0x4352414E (little-endian = CRAN)
-  if (b[0]===0x4E&&b[1]===0x41&&b[2]===0x52&&b[3]===0x43) return 'narc';
-  // SDAT: "SDAT"
-  if (b[0]===0x53&&b[1]===0x44&&b[2]===0x41&&b[3]===0x54) return 'sdat';
-  // NCGR: "RGCN"
-  if (b[0]===0x52&&b[1]===0x47&&b[2]===0x43&&b[3]===0x4E) return 'ncgr';
-  // NCLR: "RLCN"
-  if (b[0]===0x52&&b[1]===0x4C&&b[2]===0x43&&b[3]===0x4E) return 'nclr';
-  // NSCR: "RCSN"
-  if (b[0]===0x52&&b[1]===0x43&&b[2]===0x53&&b[3]===0x4E) return 'nscr';
-  // NSBTX: "BTX0"
-  if (b[0]===0x42&&b[1]===0x54&&b[2]===0x58&&b[3]===0x30) return 'nsbtx';
-  // NSBMD: "BMD0"
-  if (b[0]===0x42&&b[1]===0x4D&&b[2]===0x44&&b[3]===0x30) return 'nsbmd';
-  // NSBCA: "BCA0"
-  if (b[0]===0x42&&b[1]===0x43&&b[2]===0x41&&b[3]===0x30) return 'nsbca';
-  // LZ77 compressed
-  if (b[0]===0x10||b[0]===0x11) return 'bin.lz';
-  // SSEQ
-  if (b[0]===0x53&&b[1]===0x53&&b[2]===0x45&&b[3]===0x51) return 'sseq';
-  // SWAR
-  if (b[0]===0x53&&b[1]===0x57&&b[2]===0x41&&b[3]===0x52) return 'swar';
-  // SBNK
-  if (b[0]===0x53&&b[1]===0x42&&b[2]===0x4E&&b[3]===0x4B) return 'sbnk';
-  return 'bin';
+function logMsg(msg, cls='') {
+  const log = document.getElementById('log');
+  const line = document.createElement('div');
+  if (cls) line.className = cls;
+  line.textContent = msg;
+  log.appendChild(line);
+  log.scrollTop = log.scrollHeight;
 }
 
-function typeCategory(ext) {
-  if (['narc','arc','carc'].includes(ext)) return 'archive';
-  if (['ncgr','nclr','nscr','nsbtx','nsbmd','nsbca'].includes(ext)) return 'graphics';
-  if (['sdat','sseq','swar','sbnk','mod'].includes(ext)) return 'audio';
-  if (['arm9','arm7','overlay'].includes(ext)) return 'arm';
-  return 'binary';
+function fmtSize(b) {
+  if (b < 1024) return b + ' B';
+  if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
+  return (b/1048576).toFixed(2) + ' MB';
 }
 
-function typeClass(ext) {
-  const cat = typeCategory(ext);
-  if (cat === 'archive') return 't-narc';
-  if (cat === 'graphics') return ext === 'nsbtx' || ext === 'nsbmd' ? 't-nsbtx' : 't-ncgr';
-  if (cat === 'audio') return 't-sdat';
-  if (cat === 'arm') return 't-arm';
-  return 't-bin';
+document.getElementById('drop-zone').addEventListener('dragover', e => {
+  e.preventDefault();
+  e.currentTarget.classList.add('over');
+});
+document.getElementById('drop-zone').addEventListener('dragleave', e => {
+  e.currentTarget.classList.remove('over');
+});
+document.getElementById('drop-zone').addEventListener('drop', e => {
+  e.preventDefault();
+  e.currentTarget.classList.remove('over');
+  if (e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]);
+});
+document.getElementById('file-input').addEventListener('change', e => {
+  if (e.target.files[0]) processFile(e.target.files[0]);
+});
+document.getElementById('search').addEventListener('input', filterGrid);
+
+async function processFile(file) {
+  document.getElementById('upload-zone').classList.add('hidden');
+  document.getElementById('result-zone').classList.remove('hidden');
+  document.getElementById('stat-size').textContent = fmtSize(file.size);
+  logMsg(`loading: ${file.name} (${fmtSize(file.size)})`, 'info');
+
+  const buf = await file.arrayBuffer();
+  const view = new DataView(buf);
+  const u8 = new Uint8Array(buf);
+
+  // Try to parse the archive
+  extractArchive(view, u8, buf);
 }
 
-/* ── PARSE NDS ROM ── */
-function parseNDS(buf) {
-  const files = [];
+function extractArchive(view, u8, buf) {
+  const progWrap = document.getElementById('prog-wrap');
+  progWrap.classList.remove('hidden');
 
-  // ── Header ──
-  const gameTitle  = readStr(buf, 0x000, 12);
-  const gameCode   = readStr(buf, 0x00C, 4);
-  const makerCode  = readStr(buf, 0x010, 2);
-  const arm9Offset = readU32LE(buf, 0x020);
-  const arm9Size   = readU32LE(buf, 0x02C);
-  const arm7Offset = readU32LE(buf, 0x030);
-  const arm7Size   = readU32LE(buf, 0x03C);
-  const fntOffset  = readU32LE(buf, 0x040);
-  const fntSize    = readU32LE(buf, 0x044);
-  const fatOffset  = readU32LE(buf, 0x048);
-  const fatSize    = readU32LE(buf, 0x04C);
-  const ov9Offset  = readU32LE(buf, 0x050);
-  const ov9Size    = readU32LE(buf, 0x054);
-  const ov7Offset  = readU32LE(buf, 0x058);
-  const ov7Size    = readU32LE(buf, 0x05C);
-  const romSize    = readU32LE(buf, 0x080);
+  // The cpac2d.bin header structure:
+  // 0x00: uint32 header_size (usually 0x30)
+  // 0x04: uint32 total_file_size
+  // 0x08-0x2F: rest of header (file count etc.)
+  // Files are stored sequentially; we scan for valid image headers
 
-  // Update header UI
-  $('i-title').textContent  = gameTitle || '(unknown)';
-  $('i-code').textContent   = gameCode || '—';
-  $('i-maker').textContent  = makerCode || '—';
-  $('i-size').textContent   = fmtSize(buf.byteLength);
-  $('i-arm9').textContent   = '0x' + arm9Offset.toString(16).toUpperCase();
+  const headerSize = view.getUint32(0, true);
+  const totalSize = view.getUint32(4, true);
 
-  // ── ARM9 & ARM7 as files ──
-  files.push({ id: 'arm9', name: 'arm9.bin', path: 'code/', ext: 'arm9', offset: arm9Offset, size: arm9Size, category: 'arm' });
-  files.push({ id: 'arm7', name: 'arm7.bin', path: 'code/', ext: 'arm7', offset: arm7Offset, size: arm7Size, category: 'arm' });
+  logMsg(`archive header: ${headerSize} bytes, reported size: ${fmtSize(totalSize)}`);
 
-  // ── Overlay tables ──
-  const ov9Count = ov9Size / 32;
-  for (let i = 0; i < ov9Count; i++) {
-    const base = ov9Offset + i * 32;
-    if (base + 32 > buf.byteLength) break;
-    const fileId    = readU32LE(buf, base + 4);
-    const compSize  = readU32LE(buf, base + 8);
-    const origSize  = readU32LE(buf, base + 12);
-    if (fatOffset + (fileId+1)*8 > buf.byteLength) continue;
-    const start = readU32LE(buf, fatOffset + fileId * 8);
-    const end   = readU32LE(buf, fatOffset + fileId * 8 + 4);
-    const sz    = end - start;
-    if (start === 0 || sz <= 0 || start + sz > buf.byteLength) continue;
-    files.push({ id: 'ov9_' + i, name: `overlay9_${String(i).padStart(4,'0')}.bin`, path: 'overlays/arm9/', ext: 'overlay', offset: start, size: sz, category: 'arm' });
+  // Strategy 1: Check if there's a file table at the header
+  // Some variants store file count at offset 8
+  let fileCount = view.getUint32(8, true);
+  
+  // Sanity check file count
+  if (fileCount === 0 || fileCount > 10000) {
+    // Try reading from different offset
+    fileCount = view.getUint16(8, true);
+  }
+  logMsg(`estimated file entries: ${fileCount}`, 'info');
+
+  // Try to find file offsets — scan for image headers
+  // Each image entry starts with 0x14 (20) byte header:
+  // [0x00] uint32: header_size (0x14)
+  // [0x04] uint32: palette_offset (relative to start of entry)
+  // [0x08] uint32: palette_size (in bytes, = numColors * 2)
+  // [0x0C] uint32: image_data_offset (relative to start of entry)
+  // [0x10] uint32: image_data_size
+
+  // Additionally look for NNNN (Nintendo) format sub-images
+  const entries = [];
+
+  // Method 1: Use file table if header is valid
+  let usedTable = false;
+  if (headerSize === 0x30 || headerSize === 0x14 || headerSize === 0x18 || headerSize === 0x20) {
+    // Try to parse a file offset table starting at headerSize
+    // Some cpac2d formats have: [numFiles][offsets...] right after header
+    try {
+      const possibleCount = view.getUint32(headerSize, true);
+      if (possibleCount > 0 && possibleCount <= 5000) {
+        for (let i = 0; i < possibleCount; i++) {
+          const off = view.getUint32(headerSize + 4 + i * 4, true);
+          if (off < buf.byteLength - 0x14) {
+            entries.push(off);
+          }
+        }
+        if (entries.length > 10) {
+          logMsg(`file table found: ${entries.length} entries`, 'ok');
+          usedTable = true;
+        }
+      }
+    } catch(e) {}
   }
 
-  const ov7Count = ov7Size / 32;
-  for (let i = 0; i < ov7Count; i++) {
-    const base = ov7Offset + i * 32;
-    if (base + 32 > buf.byteLength) break;
-    const fileId = readU32LE(buf, base + 4);
-    if (fatOffset + (fileId+1)*8 > buf.byteLength) continue;
-    const start = readU32LE(buf, fatOffset + fileId * 8);
-    const end   = readU32LE(buf, fatOffset + fileId * 8 + 4);
-    const sz    = end - start;
-    if (start === 0 || sz <= 0 || start + sz > buf.byteLength) continue;
-    files.push({ id: 'ov7_' + i, name: `overlay7_${String(i).padStart(4,'0')}.bin`, path: 'overlays/arm7/', ext: 'overlay', offset: start, size: sz, category: 'arm' });
+  // Method 2: Scan linearly for valid image headers
+  if (!usedTable || entries.length === 0) {
+    entries.length = 0;
+    logMsg('scanning for image headers…', 'info');
+    scanForImages(view, u8, buf, entries);
   }
 
-  // ── FAT (File Allocation Table) ──
-  const fileCount = fatSize / 8;
-  $('i-count').textContent = fileCount + ' (FAT entries)';
+  if (entries.length === 0) {
+    logMsg('no valid image headers found — trying deep scan…', 'err');
+    deepScan(view, u8, buf, entries);
+  }
 
-  // ── FNT (File Name Table) ──
-  // Build directory tree
-  const dirs = {};
-  const rootOffset = fntOffset;
+  document.getElementById('stat-total').textContent = entries.length;
+  logMsg(`found ${entries.length} image offsets`, entries.length > 0 ? 'ok' : 'err');
 
-  function parseFNT() {
-    // Root directory: entry at fntOffset, root start file id = U16 at fntOffset+6
-    const rootEntryOff = fntOffset;
-    const rootSubTable = readU32LE(buf, rootEntryOff);
-    const rootFirstFile = readU16LE(buf, rootEntryOff + 4);
-    const dirCount = readU16LE(buf, rootEntryOff + 6);
+  let ok = 0, err = 0;
+  const grid = document.getElementById('image-grid');
+  grid.innerHTML = '';
+  images.length = 0;
 
-    function readDir(dirIdx, parentPath) {
-      const entOff = fntOffset + dirIdx * 8;
-      if (entOff + 8 > buf.byteLength) return;
-      const subTableOff = fntOffset + readU32LE(buf, entOff);
-      const firstFileId  = readU16LE(buf, entOff + 4);
+  for (let i = 0; i < entries.length; i++) {
+    const pct = Math.round((i / entries.length) * 100);
+    document.getElementById('progress-bar').style.width = pct + '%';
 
-      let pos = subTableOff;
-      let fileIdx = firstFileId;
+    try {
+      const imgData = decodeImage(view, u8, entries[i], i);
+      if (imgData) {
+        images.push(imgData);
+        addTile(imgData, images.length - 1);
+        ok++;
+      } else {
+        err++;
+      }
+    } catch(e) {
+      err++;
+      if (err <= 5) logMsg(`entry ${i}: ${e.message}`, 'err');
+    }
+  }
 
-      while (pos < fntOffset + fntSize && pos < buf.byteLength) {
-        const lenType = new Uint8Array(buf, pos, 1)[0];
-        pos++;
-        if (lenType === 0x00) break; // end of subtable
-        const nameLen = lenType & 0x7F;
-        const isDir   = (lenType & 0x80) !== 0;
-        if (pos + nameLen > buf.byteLength) break;
-        const nameBytes = new Uint8Array(buf, pos, nameLen);
-        const name = String.fromCharCode(...nameBytes);
-        pos += nameLen;
+  document.getElementById('progress-bar').style.width = '100%';
+  document.getElementById('stat-ok').textContent = ok;
+  document.getElementById('stat-err').textContent = err;
+  logMsg(`done: ${ok} images decoded, ${err} errors`, ok > 0 ? 'ok' : 'err');
 
-        if (isDir) {
-          const subDirId = readU16LE(buf, pos) - 0xF000;
-          pos += 2;
-          const subPath = parentPath ? parentPath + '/' + name : name;
-          dirs[subDirId] = subPath;
-          readDir(subDirId, subPath);
-        } else {
-          // It's a file — look up in FAT
-          const fatOff = fatOffset + fileIdx * 8;
-          if (fatOff + 8 <= buf.byteLength) {
-            const start = readU32LE(buf, fatOff);
-            const end   = readU32LE(buf, fatOff + 4);
-            const sz    = end - start;
-            if (sz > 0 && start + sz <= buf.byteLength) {
-              const ext = guessExt(buf, start, sz);
-              const finalName = name.includes('.') ? name : name + '.' + ext;
-              const filePath = parentPath ? parentPath + '/' : '';
-              files.push({
-                id: fileIdx,
-                name: finalName,
-                path: filePath,
-                ext: ext,
-                offset: start,
-                size: sz,
-                category: typeCategory(ext)
-              });
+  if (ok === 0) {
+    document.getElementById('image-grid').innerHTML =
+      '<div class="empty">⚠ Could not decode images from this file.<br>This tool supports Apollo Justice DS (cpac2d.bin) Capcom archive format.</div>';
+  }
+}
+
+function scanForImages(view, u8, buf, entries) {
+  // Walk through the buffer looking for valid 0x14-byte image headers
+  // Heuristic: header_len=0x14, palette_offset in reasonable range, palette_size multiple of 2
+  const len = buf.byteLength;
+  let offset = 0x30; // skip archive header
+
+  while (offset < len - 0x14) {
+    try {
+      const hdrLen = view.getUint32(offset, true);
+      const palOff = view.getUint32(offset + 4, true);
+      const palSize = view.getUint32(offset + 8, true);
+      const imgOff = view.getUint32(offset + 12, true);
+      const imgSize = view.getUint32(offset + 16, true);
+
+      const isValidHeader = (
+        hdrLen === 0x14 &&
+        palOff >= 0x14 && palOff < 0x10000 &&
+        palSize > 0 && palSize <= 0x800 && (palSize % 2 === 0) &&
+        imgOff >= palOff + palSize && imgOff < 0x20000 &&
+        imgSize > 0 && imgSize < 0x100000 &&
+        offset + imgOff + imgSize <= len
+      );
+
+      if (isValidHeader) {
+        entries.push(offset);
+        offset += imgOff + imgSize;
+        // Align to 4 bytes
+        while (offset % 4 !== 0) offset++;
+        continue;
+      }
+    } catch(e) {}
+    offset += 4;
+  }
+}
+
+function deepScan(view, u8, buf, entries) {
+  // Alternative: check for NCLR (palette) or NCGR (char data) Nintendo formats
+  // embedded inside the Capcom container
+  const len = buf.byteLength;
+  const sig1 = [0x52, 0x4C, 0x43, 0x4E]; // RLCN = NCLR reversed
+  const sig2 = [0x52, 0x47, 0x43, 0x4E]; // RGCN = NCGR reversed
+
+  for (let i = 0; i < len - 4; i++) {
+    if (u8[i]===sig2[0] && u8[i+1]===sig2[1] && u8[i+2]===sig2[2] && u8[i+3]===sig2[3]) {
+      entries.push(i);
+      i += 4;
+    }
+  }
+
+  if (entries.length > 0) {
+    logMsg(`found ${entries.length} NCGR Nintendo format entries`, 'ok');
+  }
+}
+
+function decodeImage(view, u8, offset, idx) {
+  const bufLen = u8.length;
+
+  // Check if it looks like a standard Capcom image header
+  const hdrLen = view.getUint32(offset, true);
+
+  if (hdrLen === 0x14) {
+    return decodeCapcomImage(view, u8, offset, idx);
+  }
+
+  // Try NCGR format (Nintendo DS tile format)
+  if (u8[offset]===0x52 && u8[offset+1]===0x47 && u8[offset+2]===0x43 && u8[offset+3]===0x4E) {
+    return null; // Would need separate NCLR palette — skip for now
+  }
+
+  return null;
+}
+
+function decodeCapcomImage(view, u8, offset, idx) {
+  // Header layout (all little-endian uint32):
+  // +0x00: header_size (=0x14)
+  // +0x04: palette_offset (from start of entry)
+  // +0x08: palette_size (numColors * 2, BGR555 format)
+  // +0x0C: image_data_offset (from start of entry)
+  // +0x10: image_data_size
+
+  const hdrLen    = view.getUint32(offset + 0x00, true);
+  const palOff    = view.getUint32(offset + 0x04, true);
+  const palSize   = view.getUint32(offset + 0x08, true);
+  const imgOff    = view.getUint32(offset + 0x0C, true);
+  const imgSize   = view.getUint32(offset + 0x10, true);
+
+  const numColors = palSize / 2;
+  const is4bpp = numColors <= 16;
+  const is8bpp = numColors > 16 && numColors <= 256;
+
+  if (!is4bpp && !is8bpp) {
+    throw new Error(`unexpected palette size: ${numColors} colors`);
+  }
+
+  // Parse BGR555 palette
+  const palette = [];
+  const palBase = offset + palOff;
+  for (let c = 0; c < numColors; c++) {
+    const raw = view.getUint16(palBase + c * 2, true);
+    const r = (raw & 0x1F) << 3;
+    const g = ((raw >> 5) & 0x1F) << 3;
+    const b = ((raw >> 10) & 0x1F) << 3;
+    palette.push([r, g, b]);
+  }
+
+  // Pixel data
+  const pixBase = offset + imgOff;
+  const pixData = u8.subarray(pixBase, pixBase + imgSize);
+
+  // Determine width/height
+  // NDS tile data is stored in 8×8 tiles
+  // Total pixels = imgSize * (8 or 2) depending on bpp
+  let totalPixels;
+  if (is4bpp) {
+    totalPixels = imgSize * 2; // 2 pixels per byte
+  } else {
+    totalPixels = imgSize; // 1 pixel per byte
+  }
+
+  // Common NDS sprite dimensions — pick best fit
+  const dims = guessDimensions(totalPixels);
+  const width = dims[0], height = dims[1];
+
+  if (width === 0 || height === 0) {
+    throw new Error(`can't determine dimensions for ${totalPixels} pixels`);
+  }
+
+  // Build RGBA pixel array (untiled: 8×8 tile order)
+  const rgba = new Uint8ClampedArray(width * height * 4);
+  const tileW = 8, tileH = 8;
+  const tilesX = Math.ceil(width / tileW);
+  const tilesY = Math.ceil(height / tileH);
+
+  let byteIdx = 0;
+
+  for (let ty = 0; ty < tilesY; ty++) {
+    for (let tx = 0; tx < tilesX; tx++) {
+      for (let py = 0; py < tileH; py++) {
+        for (let px = 0; px < tileW; px += (is4bpp ? 2 : 1)) {
+          const screenX = tx * tileW + px;
+          const screenY = ty * tileH + py;
+
+          if (is4bpp) {
+            if (byteIdx >= pixData.length) break;
+            const byte = pixData[byteIdx++];
+            const ci0 = byte & 0x0F;
+            const ci1 = (byte >> 4) & 0x0F;
+
+            for (let sub = 0; sub < 2; sub++) {
+              const sx = screenX + sub;
+              if (sx < width && screenY < height) {
+                const pi = (screenY * width + sx) * 4;
+                const ci = sub === 0 ? ci0 : ci1;
+                const col = ci < palette.length ? palette[ci] : [0,0,0];
+                rgba[pi]   = col[0];
+                rgba[pi+1] = col[1];
+                rgba[pi+2] = col[2];
+                rgba[pi+3] = ci === 0 ? 0 : 255; // color 0 = transparent
+              }
+            }
+          } else {
+            if (byteIdx >= pixData.length) break;
+            const ci = pixData[byteIdx++];
+            if (screenX < width && screenY < height) {
+              const pi = (screenY * width + screenX) * 4;
+              const col = ci < palette.length ? palette[ci] : [0,0,0];
+              rgba[pi]   = col[0];
+              rgba[pi+1] = col[1];
+              rgba[pi+2] = col[2];
+              rgba[pi+3] = ci === 0 ? 0 : 255;
             }
           }
-          fileIdx++;
         }
       }
     }
-
-    dirs[0] = '';
-    readDir(0, '');
   }
 
-  try { parseFNT(); } catch(e) { console.warn('FNT parse error:', e); }
+  // Render to canvas to get PNG data URL
+  const canvas = document.createElement('canvas');
+  canvas.width = width;
+  canvas.height = height;
+  const ctx = canvas.getContext('2d');
+  const imgDataObj = new ImageData(rgba, width, height);
+  ctx.putImageData(imgDataObj, 0, 0);
+  const dataUrl = canvas.toDataURL('image/png');
 
-  // Fallback: if FNT gave us too few, enumerate FAT directly
-  const namedIds = new Set(files.filter(f=>typeof f.id==='number').map(f=>f.id));
-  let fallbackAdded = 0;
-  for (let i = 0; i < fileCount && fallbackAdded < 5000; i++) {
-    if (namedIds.has(i)) continue;
-    const fatOff = fatOffset + i * 8;
-    if (fatOff + 8 > buf.byteLength) break;
-    const start = readU32LE(buf, fatOff);
-    const end   = readU32LE(buf, fatOff + 4);
-    const sz    = end - start;
-    if (sz <= 0 || sz > 0x2000000 || start + sz > buf.byteLength || start < 0x8000) continue;
-    const ext = guessExt(buf, start, sz);
-    files.push({
-      id: i,
-      name: `file_${String(i).padStart(4,'0')}.${ext}`,
-      path: 'unnamed/',
-      ext: ext,
-      offset: start,
-      size: sz,
-      category: typeCategory(ext)
-    });
-    namedIds.add(i);
-    fallbackAdded++;
-  }
-
-  return files;
+  return {
+    name: `img_${String(idx).padStart(4,'0')}`,
+    width, height,
+    bpp: is4bpp ? 4 : 8,
+    numColors,
+    dataUrl,
+    canvas,
+    offset,
+    totalPixels
+  };
 }
 
-/* ── NARC PARSER ── */
-function parseNARC(buf, offset, size) {
-  const bytes = new Uint8Array(buf, offset, size);
-  const sub = bytes.buffer.slice ? bytes.buffer.slice(offset, offset+size) : buf.slice(offset, offset+size);
-  const view = new DataView(sub);
-  const inner = [];
+function guessDimensions(totalPixels) {
+  // Common NDS sprite/BG sizes (multiples of 8)
+  const preferred = [
+    [256, 192], [256, 256], [192, 256], [512, 192], [192, 512],
+    [128, 128], [64, 64], [32, 32], [16, 16], [8, 8],
+    [64, 32], [32, 64], [128, 64], [64, 128],
+    [256, 128], [128, 256], [512, 256], [256, 512],
+    [32, 16], [16, 32], [24, 24], [48, 48], [96, 96], [160, 160],
+    [128, 96], [96, 128], [80, 80], [40, 40], [72, 72],
+    [320, 240], [512, 384],
+  ];
 
-  try {
-    // NARC magic: 4E 41 52 43
-    if (view.getUint8(0)!==0x4E||view.getUint8(1)!==0x41||view.getUint8(2)!==0x52||view.getUint8(3)!==0x43) return inner;
-    const numBlocks = view.getUint16(0x0E, true);
-    // BTAF block at offset 0x10
-    if (view.getUint8(0x10)!==0x42||view.getUint8(0x11)!==0x54||view.getUint8(0x12)!==0x41||view.getUint8(0x13)!==0x46) return inner;
-    const btafSize = view.getUint32(0x14, true);
-    const numFiles = view.getUint16(0x18, true);
-    // FAT entries start at 0x1C
-    const fatStart = 0x1C;
-    // GMIF block
-    const gmifOff = 0x10 + btafSize;
-    // Optionally BTNF block
-    let dataOff = gmifOff;
-    if (view.getUint8(gmifOff)===0x42&&view.getUint8(gmifOff+1)===0x54&&view.getUint8(gmifOff+2)===0x4E&&view.getUint8(gmifOff+3)===0x46) {
-      const btnfSize = view.getUint32(gmifOff+4, true);
-      dataOff = gmifOff + btnfSize;
+  for (const [w, h] of preferred) {
+    if (w * h === totalPixels) return [w, h];
+  }
+
+  // Try square root
+  const sq = Math.round(Math.sqrt(totalPixels));
+  if (sq * sq === totalPixels && sq % 8 === 0) return [sq, sq];
+
+  // Find best rectangular fit (width >= height, both multiples of 8)
+  for (let w = 512; w >= 8; w -= 8) {
+    if (totalPixels % w === 0) {
+      const h = totalPixels / w;
+      if (h >= 8 && h <= 512 && h % 8 === 0) return [w, h];
     }
-    // GMIF offset
-    let gmifDataOff = dataOff;
-    if (view.getUint8(dataOff)===0x47&&view.getUint8(dataOff+1)===0x4D&&view.getUint8(dataOff+2)===0x49&&view.getUint8(dataOff+3)===0x46) {
-      gmifDataOff = dataOff + 8;
-    }
-    for (let i = 0; i < numFiles && i < 2000; i++) {
-      const eOff = fatStart + i * 8;
-      if (eOff + 8 > btafSize + 0x10) break;
-      const start = view.getUint32(eOff, true);
-      const end   = view.getUint32(eOff + 4, true);
-      const sz    = end - start;
-      const absOff = gmifDataOff + start;
-      if (sz <= 0 || absOff + sz > size) continue;
-      const ext = guessExt(sub, absOff, sz);
-      inner.push({ id: i, name: `${String(i).padStart(4,'0')}.${ext}`, offset: absOff, size: sz, ext });
-    }
-  } catch(e) {}
-  return inner;
-}
-
-/* ── UI ── */
-function renderFiles() {
-  const search = $('search-input').value.toLowerCase();
-  let list = allFiles.filter(f => {
-    if (activeType !== 'all' && f.category !== activeType) return false;
-    if (search && !f.name.toLowerCase().includes(search) && !f.path.toLowerCase().includes(search)) return false;
-    return true;
-  });
-
-  // Sort
-  if (sortMode === 'name') list.sort((a,b)=>a.name.localeCompare(b.name));
-  else if (sortMode === 'size-desc') list.sort((a,b)=>b.size-a.size);
-  else if (sortMode === 'size-asc') list.sort((a,b)=>a.size-b.size);
-  else if (sortMode === 'type') list.sort((a,b)=>a.ext.localeCompare(b.ext));
-  else list.sort((a,b)=>{
-    const ai = typeof a.id==='number'?a.id:999999;
-    const bi = typeof b.id==='number'?b.id:999999;
-    return ai-bi;
-  });
-
-  filteredFiles = list;
-  $('panel-title').textContent = `${list.length} files`;
-
-  const tbody = $('file-tbody');
-  tbody.innerHTML = '';
-
-  if (list.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state">No files match the current filter.</div></td></tr>';
-    return;
   }
 
-  const frag = document.createDocumentFragment();
-  list.forEach(f => {
-    const tr = document.createElement('tr');
-    tr.dataset.id = f.id;
-    const cls = typeClass(f.ext);
-    const isNARC = f.ext === 'narc';
-    tr.innerHTML = `
-      <td class="td-check"><input type="checkbox" class="file-check" checked/></td>
-      <td>
-        <div class="file-name">${f.name}${isNARC?` <span style="font-size:10px;color:var(--accent);cursor:pointer" onclick="openNARC(${f.id})">[peek]</span>`:''}</div>
-        <div class="file-path">${f.path||'/'}</div>
-      </td>
-      <td><span class="type-badge ${cls}">.${f.ext}</span></td>
-      <td class="size-cell">${fmtSize(f.size)}</td>
-      <td class="id-cell">${typeof f.id==='number'?('0x'+f.id.toString(16).toUpperCase()):f.id}</td>
-    `;
-    frag.appendChild(tr);
+  // Fallback: just make width = next power of 2
+  let w = 8;
+  while (w * w < totalPixels) w *= 2;
+  const h = Math.ceil(totalPixels / w);
+  if (w > 0 && h > 0) return [w, h];
+
+  return [0, 0];
+}
+
+function addTile(img, idx) {
+  const grid = document.getElementById('image-grid');
+  const tile = document.createElement('div');
+  tile.className = 'tile';
+  tile.dataset.idx = idx;
+  tile.dataset.name = img.name;
+  tile.dataset.dims = `${img.width}×${img.height}`;
+
+  const canvas = document.createElement('canvas');
+  canvas.className = 'tile-img';
+  canvas.width = img.width;
+  canvas.height = img.height;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img.canvas, 0, 0);
+
+  const sel = document.createElement('div');
+  sel.className = 'tile-sel';
+  sel.textContent = '✓';
+
+  const name = document.createElement('div');
+  name.className = 'tile-name';
+  name.textContent = img.name + '.png';
+
+  const dim = document.createElement('div');
+  dim.className = 'tile-dim';
+  dim.textContent = `${img.width}×${img.height} · ${img.bpp}bpp`;
+
+  tile.appendChild(canvas);
+  tile.appendChild(sel);
+  tile.appendChild(name);
+  tile.appendChild(dim);
+
+  tile.addEventListener('click', (e) => {
+    if (e.shiftKey || e.ctrlKey || e.metaKey) {
+      tile.classList.toggle('selected');
+      updateSelZip();
+    } else {
+      openLightbox(idx);
+    }
   });
-  tbody.appendChild(frag);
 
-  updateStats();
+  grid.appendChild(tile);
 }
 
-function updateStats() {
-  const counts = { arm:0, binary:0, graphics:0, audio:0, archive:0 };
-  allFiles.forEach(f => {
-    const c = f.category;
-    if (c in counts) counts[c]++;
-    else counts.binary++;
-  });
-  $('cnt-bin').textContent = counts.binary;
-  $('cnt-img').textContent = counts.graphics;
-  $('cnt-snd').textContent = counts.audio;
-  $('cnt-arc').textContent = counts.archive;
-  $('cnt-arm').textContent = counts.arm;
-  const total = allFiles.length;
-  const main_cats = counts.binary + counts.graphics + counts.audio + counts.archive + counts.arm;
-  $('cnt-other').textContent = Math.max(0, total - main_cats);
+function openLightbox(idx) {
+  lbIdx = idx;
+  const img = images[idx];
+  const canvas = document.getElementById('lb-canvas');
+  canvas.width = img.width;
+  canvas.height = img.height;
+  const ctx = canvas.getContext('2d');
+  ctx.drawImage(img.canvas, 0, 0);
+
+  document.getElementById('lb-meta').innerHTML = `
+    <div>name</div><div><span>${img.name}.png</span></div>
+    <div>size</div><div><span>${img.width} × ${img.height}</span></div>
+    <div>depth</div><div><span>${img.bpp}bpp</span></div>
+    <div>colors</div><div><span>${img.numColors}</span></div>
+    <div>pixels</div><div><span>${img.totalPixels.toLocaleString()}</span></div>
+    <div>offset</div><div><span>0x${img.offset.toString(16).toUpperCase()}</span></div>
+  `;
+  document.getElementById('lightbox').classList.add('open');
 }
 
-/* ── NARC PEEK ── */
-function openNARC(fileId) {
-  const file = allFiles.find(f=>f.id===fileId);
-  if (!file) return;
-  const entries = parseNARC(romBuffer, file.offset, file.size);
-  $('modal-title').textContent = file.name + ' — ' + entries.length + ' entries';
-  const nc = $('narc-content');
-  if (entries.length === 0) {
-    nc.innerHTML = '<p style="color:var(--muted);font-size:12px">Could not parse NARC contents.</p>';
-  } else {
-    nc.innerHTML = '<div class="narc-file-list">' +
-      entries.map(e => `<div class="narc-file-item">
-        <span>${e.name}</span>
-        <span class="type-badge ${typeClass(e.ext)}">.${e.ext} &nbsp; ${fmtSize(e.size)}</span>
-      </div>`).join('') +
-    '</div>';
-  }
-  $('narc-modal').classList.add('open');
+function closeLightbox() {
+  document.getElementById('lightbox').classList.remove('open');
 }
-window.openNARC = openNARC;
 
-/* ── EXTRACT ── */
-async function extractFiles(list) {
-  if (list.length === 0) return alert('No files selected.');
-  $('progress-section').style.display = 'block';
-  $('prog-fill').style.width = '0%';
-  $('prog-title').textContent = 'Building ZIP…';
+document.getElementById('lightbox').addEventListener('click', function(e) {
+  if (e.target === this) closeLightbox();
+});
 
+function downloadCurrent() {
+  if (lbIdx < 0) return;
+  const img = images[lbIdx];
+  const a = document.createElement('a');
+  a.href = img.dataUrl;
+  a.download = img.name + '.png';
+  a.click();
+}
+
+async function downloadZip() {
+  const btn = document.getElementById('btn-zip');
+  btn.disabled = true;
+  btn.textContent = 'packing…';
+  await buildZip(images);
+  btn.disabled = false;
+  btn.textContent = '↓ download all as .zip';
+}
+
+async function downloadSelected() {
+  const selected = [...document.querySelectorAll('.tile.selected')]
+    .map(t => images[parseInt(t.dataset.idx)]);
+  if (!selected.length) return;
+  await buildZip(selected);
+}
+
+async function buildZip(imgs) {
   const zip = new JSZip();
-  const seenPaths = {};
-
-  for (let i = 0; i < list.length; i++) {
-    const f = list[i];
-    $('prog-fill').style.width = ((i/list.length)*100).toFixed(1) + '%';
-    $('prog-label').textContent = `${i} / ${list.length} — ${f.name}`;
-
-    let outPath = (f.path || '') + f.name;
-    // Deduplicate
-    if (seenPaths[outPath]) {
-      const parts = f.name.split('.');
-      const ext = parts.length > 1 ? '.' + parts.pop() : '';
-      outPath = (f.path||'') + parts.join('.') + '_' + i + ext;
-    }
-    seenPaths[outPath] = true;
-
-    // If NARC, also unpack contents into sub-folder
-    const data = new Uint8Array(romBuffer, f.offset, f.size);
-    zip.file(outPath, data);
-
-    if (f.ext === 'narc') {
-      const narcEntries = parseNARC(romBuffer, f.offset, f.size);
-      const subDir = (f.path||'') + f.name.replace('.narc','') + '/';
-      narcEntries.forEach(ne => {
-        const neData = new Uint8Array(romBuffer, f.offset + ne.offset, ne.size);
-        zip.file(subDir + ne.name, neData);
-      });
-    }
-
-    // Yield to browser
-    if (i % 50 === 0) await new Promise(r => setTimeout(r, 0));
+  for (const img of imgs) {
+    const dataUrl = img.dataUrl;
+    const base64 = dataUrl.split(',')[1];
+    zip.file(img.name + '.png', base64, { base64: true });
   }
-
-  $('prog-title').textContent = 'Compressing…';
-  $('prog-fill').style.width = '95%';
-  const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 1 } });
-  $('prog-fill').style.width = '100%';
-  $('prog-title').textContent = 'Done! ' + list.length + ' files extracted.';
-  $('prog-label').textContent = 'Download starting…';
-
+  const blob = await zip.generateAsync({ type: 'blob' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = 'AAI1_extracted.zip';
+  a.download = 'cpac2d_extracted.zip';
   a.click();
-  setTimeout(() => URL.revokeObjectURL(url), 5000);
+  URL.revokeObjectURL(url);
 }
 
-/* ── EVENT WIRING ── */
-function onROMLoaded(buf) {
-  romBuffer = buf;
-  allFiles = parseNDS(buf);
-
-  $('rominfo').style.display = 'block';
-  $('statsbar').style.display = 'block';
-  $('filterbar').style.display = 'flex';
-  $('filepanel').style.display = 'block';
-  updateStats();
-  renderFiles();
+function selectAll() {
+  document.querySelectorAll('.tile').forEach(t => t.classList.add('selected'));
+  updateSelZip();
 }
 
-// File input
-$('file-input').addEventListener('change', e => {
-  const f = e.target.files[0];
-  if (!f) return;
-  const reader = new FileReader();
-  reader.onload = ev => onROMLoaded(ev.target.result);
-  reader.readAsArrayBuffer(f);
-});
+function selectNone() {
+  document.querySelectorAll('.tile').forEach(t => t.classList.remove('selected'));
+  updateSelZip();
+}
 
-// Drag & drop
-const dz = $('dropzone');
-dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
-dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
-dz.addEventListener('drop', e => {
-  e.preventDefault(); dz.classList.remove('drag-over');
-  const f = e.dataTransfer.files[0];
-  if (!f) return;
-  const reader = new FileReader();
-  reader.onload = ev => onROMLoaded(ev.target.result);
-  reader.readAsArrayBuffer(f);
-});
+function updateSelZip() {
+  const n = document.querySelectorAll('.tile.selected').length;
+  const btn = document.getElementById('btn-sel-zip');
+  btn.disabled = n === 0;
+  btn.textContent = n > 0 ? `↓ download ${n} selected` : '↓ download selected';
+}
 
-// Filter buttons
-document.querySelectorAll('.type-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
-    btn.classList.add('active');
-    activeType = btn.dataset.type;
-    renderFiles();
+function filterGrid() {
+  const q = document.getElementById('search').value.toLowerCase();
+  document.querySelectorAll('.tile').forEach(t => {
+    const match = t.dataset.name.includes(q) || t.dataset.dims.includes(q);
+    t.style.display = match ? '' : 'none';
   });
-});
+}
 
-// Search
-$('search-input').addEventListener('input', renderFiles);
-$('sort-select').addEventListener('change', e => { sortMode = e.target.value; renderFiles(); });
-
-// Select all / none
-$('select-all-btn').addEventListener('click', () => {
-  document.querySelectorAll('.file-check').forEach(c => c.checked = true);
-  $('master-check').checked = true;
-});
-$('select-none-btn').addEventListener('click', () => {
-  document.querySelectorAll('.file-check').forEach(c => c.checked = false);
-  $('master-check').checked = false;
-});
-$('master-check').addEventListener('change', e => {
-  document.querySelectorAll('.file-check').forEach(c => c.checked = e.target.checked);
-});
-
-// Extract selected
-$('extract-btn').addEventListener('click', () => {
-  const rows = document.querySelectorAll('#file-tbody tr');
-  const selected = [];
-  rows.forEach((tr, i) => {
-    const chk = tr.querySelector('.file-check');
-    if (chk && chk.checked && filteredFiles[i]) selected.push(filteredFiles[i]);
-  });
-  extractFiles(selected);
-});
-
-// Extract all
-$('extract-all-btn').addEventListener('click', () => extractFiles(allFiles));
-
-// NARC modal close
-$('modal-close').addEventListener('click', () => $('narc-modal').classList.remove('open'));
-$('narc-modal').addEventListener('click', e => { if (e.target === $('narc-modal')) $('narc-modal').classList.remove('open'); });
+function resetTool() {
+  document.getElementById('result-zone').classList.add('hidden');
+  document.getElementById('upload-zone').classList.remove('hidden');
+  document.getElementById('image-grid').innerHTML = '';
+  document.getElementById('log').innerHTML = '';
+  document.getElementById('file-input').value = '';
+  images.length = 0;
+  document.getElementById('progress-bar').style.width = '0%';
+  document.getElementById('prog-wrap').classList.add('hidden');
+}
 </script>
 </body>
 </html>
