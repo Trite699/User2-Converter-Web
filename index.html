@@ -1,864 +1,939 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="utf-8">
-<meta name="viewport" content="width=device-width, initial-scale=1">
-<title>user.2 Converter</title>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AAI1 ROM Extractor — Miles Edgeworth</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
 <style>
-*{box-sizing:border-box;margin:0;padding:0;}
-:root{
-  --bg-primary:#fff;--bg-secondary:#f5f5f5;--bg-success:#e6f9ee;--bg-danger:#fdecea;--bg-warn:#fff8e1;
-  --text-primary:#111;--text-secondary:#666;--text-tertiary:#aaa;
-  --text-success:#1a7a3f;--text-danger:#b71c1c;--text-warn:#7a5800;
-  --border-t:rgba(0,0,0,0.12);--border-s:rgba(0,0,0,0.2);--border-p:rgba(0,0,0,0.35);
-  --r-md:8px;--r-lg:12px;
-}
-@media(prefers-color-scheme:dark){
-  :root{
-    --bg-primary:#1e1e1e;--bg-secondary:#2a2a2a;--bg-success:#0d3320;--bg-danger:#3b1010;--bg-warn:#2a2000;
-    --text-primary:#f0f0f0;--text-secondary:#aaa;--text-tertiary:#666;
-    --text-success:#4caf82;--text-danger:#f08080;--text-warn:#e6c040;
-    --border-t:rgba(255,255,255,0.1);--border-s:rgba(255,255,255,0.2);--border-p:rgba(255,255,255,0.35);
+  :root {
+    --bg: #0a0a0f;
+    --surface: #12121a;
+    --surface2: #1a1a26;
+    --border: rgba(255,255,255,0.08);
+    --border2: rgba(255,255,255,0.15);
+    --text: #e8e8f0;
+    --muted: #888899;
+    --accent: #c8a84b;
+    --accent2: #e8c870;
+    --red: #e05555;
+    --blue: #5588e0;
+    --green: #55c08a;
+    --purple: #9966ff;
+    --teal: #44ccbb;
+    --font: 'Syne', sans-serif;
+    --mono: 'JetBrains Mono', monospace;
   }
-}
-body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:var(--text-primary);background:var(--bg-secondary);min-height:100vh;}
-.wrap{max-width:700px;margin:0 auto;padding:2rem 1rem 4rem;}
-h1{font-size:22px;font-weight:500;margin-bottom:4px;}
-.sub{font-size:13px;color:var(--text-secondary);margin-bottom:20px;}
-.card{background:var(--bg-primary);border:0.5px solid var(--border-t);border-radius:var(--r-lg);padding:1rem 1.25rem;margin-bottom:12px;}
-.card-title{font-size:11px;font-weight:500;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:8px;}
-.card-title-right{font-size:11px;font-weight:400;color:var(--text-tertiary);text-transform:none;letter-spacing:0;flex-shrink:0;}
-.drop{display:flex;flex-direction:column;align-items:center;gap:6px;border:1.5px dashed var(--border-s);border-radius:var(--r-md);padding:1.25rem 1rem;text-align:center;cursor:pointer;transition:border-color .15s;position:relative;}
-.drop:hover,.drop.dragover{border-color:var(--border-p);}
-.drop input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
-.drop-icon{width:30px;height:30px;border-radius:50%;background:var(--bg-secondary);display:flex;align-items:center;justify-content:center;}
-.drop-icon svg{width:14px;height:14px;stroke:var(--text-secondary);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
-.drop-label{font-size:13px;color:var(--text-secondary);}
-.drop-hint{font-size:11px;color:var(--text-tertiary);}
-.meta-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px;}
-.metric{background:var(--bg-secondary);border-radius:var(--r-md);padding:8px 10px;}
-.metric-label{font-size:11px;color:var(--text-secondary);margin-bottom:2px;}
-.metric-val{font-size:13px;font-weight:500;font-family:monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
-.field{display:flex;flex-direction:column;gap:5px;}
-.field label{font-size:12px;color:var(--text-secondary);font-weight:500;}
-.field select,.field input[type=text]{font-family:inherit;font-size:13px;padding:7px 10px;border-radius:var(--r-md);border:0.5px solid var(--border-s);background:var(--bg-secondary);color:var(--text-primary);width:100%;}
-.field select:focus,.field input[type=text]:focus{outline:none;border-color:var(--border-p);}
-.field textarea{font-family:monospace;font-size:11px;padding:10px;border-radius:var(--r-md);border:0.5px solid var(--border-s);background:var(--bg-secondary);color:var(--text-primary);width:100%;resize:vertical;min-height:220px;line-height:1.65;}
-.field textarea:focus{outline:none;border-color:var(--border-p);}
-.grid2{display:grid;grid-template-columns:1fr 1fr;gap:8px;}
-.seg-ctrl{display:flex;border:0.5px solid var(--border-s);border-radius:var(--r-md);overflow:hidden;width:fit-content;}
-.seg-btn{font-family:inherit;font-size:12px;font-weight:500;padding:6px 18px;border:none;background:transparent;color:var(--text-secondary);cursor:pointer;transition:background .12s,color .12s;}
-.seg-btn:not(:last-child){border-right:0.5px solid var(--border-s);}
-.seg-btn.active{background:var(--text-primary);color:var(--bg-primary);}
-.seg-btn:hover:not(.active){background:var(--bg-secondary);}
-.xor-note{font-size:12px;color:var(--text-tertiary);margin-top:8px;padding:6px 10px;background:var(--bg-secondary);border-radius:var(--r-md);}
-.btn-row{display:flex;gap:8px;flex-wrap:wrap;}
-.btn{font-family:inherit;font-size:13px;font-weight:500;padding:7px 16px;border-radius:var(--r-md);border:0.5px solid var(--border-s);background:transparent;color:var(--text-primary);cursor:pointer;transition:background .12s;white-space:nowrap;}
-.btn:hover:not(:disabled){background:var(--bg-secondary);}
-.btn:active:not(:disabled){transform:scale(0.98);}
-.btn:disabled{opacity:.35;cursor:default;}
-.btn-primary{background:var(--text-primary);color:var(--bg-primary);border-color:transparent;}
-.btn-primary:hover:not(:disabled){opacity:.88;background:var(--text-primary);}
-.status{font-size:13px;padding:7px 11px;border-radius:var(--r-md);margin-top:10px;background:var(--bg-secondary);color:var(--text-secondary);display:flex;align-items:flex-start;gap:6px;}
-.status.ok{background:var(--bg-success);color:var(--text-success);}
-.status.err{background:var(--bg-danger);color:var(--text-danger);}
-.status.warn{background:var(--bg-warn);color:var(--text-warn);}
-.dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;margin-top:4px;}
-.dl-meta{font-size:12px;color:var(--text-tertiary);margin-top:8px;}
-.mt{margin-top:10px;}
-.tabs{display:flex;gap:2px;margin-bottom:12px;border-bottom:0.5px solid var(--border-t);}
-.tab-btn{font-family:inherit;font-size:13px;font-weight:500;padding:8px 16px 10px;background:transparent;border:none;color:var(--text-secondary);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s;}
-.tab-btn:hover{color:var(--text-primary);}
-.tab-btn.active{color:var(--text-primary);border-bottom-color:var(--text-primary);}
-.tab-panel{display:none;}
-.tab-panel.active{display:block;}
-.preview-panel{border:0.5px solid var(--border-t);border-radius:var(--r-md);background:var(--bg-secondary);overflow:hidden;margin-top:14px;}
-.preview-tabs{display:flex;border-bottom:0.5px solid var(--border-t);background:var(--bg-primary);}
-.preview-tab{font-family:inherit;font-size:11px;font-weight:500;padding:6px 14px;border:none;background:transparent;color:var(--text-tertiary);cursor:pointer;border-bottom:2px solid transparent;transition:color .12s;}
-.preview-tab.active{color:var(--text-primary);border-bottom-color:var(--text-primary);}
-.preview-body{padding:12px;max-height:420px;overflow-y:auto;}
-.label-list{display:flex;flex-direction:column;gap:2px;}
-.label-item{border-radius:var(--r-md);overflow:hidden;border:0.5px solid var(--border-t);}
-.label-hdr{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg-primary);cursor:pointer;user-select:none;}
-.label-hdr:hover{background:var(--bg-secondary);}
-.label-idx{font-size:10px;color:var(--text-tertiary);font-family:monospace;min-width:28px;}
-.label-name{font-size:12px;font-weight:500;flex:1;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
-.label-caret{font-size:10px;color:var(--text-tertiary);transition:transform .15s;}
-.label-caret.open{transform:rotate(90deg);}
-.label-body{display:none;padding:8px 10px 10px;background:var(--bg-secondary);font-family:monospace;font-size:11px;line-height:1.6;white-space:pre-wrap;word-break:break-all;color:var(--text-secondary);border-top:0.5px solid var(--border-t);}
-.label-body.open{display:block;}
-.search-bar{display:flex;gap:6px;margin-bottom:10px;}
-.search-bar input{font-family:inherit;font-size:12px;padding:6px 10px;border-radius:var(--r-md);border:0.5px solid var(--border-s);background:var(--bg-primary);color:var(--text-primary);flex:1;}
-.search-bar input:focus{outline:none;border-color:var(--border-p);}
-.preview-stats{font-size:11px;color:var(--text-tertiary);margin-bottom:8px;}
-.raw-view{font-family:monospace;font-size:11px;line-height:1.65;white-space:pre-wrap;word-break:break-all;color:var(--text-secondary);}
-.empty-note{font-size:13px;color:var(--text-tertiary);text-align:center;padding:2rem 0;}
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+  body {
+    background: var(--bg);
+    color: var(--text);
+    font-family: var(--font);
+    min-height: 100vh;
+    overflow-x: hidden;
+  }
+
+  /* ── HEADER ── */
+  header {
+    border-bottom: 1px solid var(--border);
+    padding: 0 2rem;
+    background: var(--surface);
+    position: sticky; top: 0; z-index: 100;
+    display: flex; align-items: center; justify-content: space-between;
+    height: 56px;
+  }
+  .logo { display: flex; align-items: center; gap: 10px; }
+  .logo-badge {
+    background: var(--accent);
+    color: #0a0a0f;
+    font-size: 10px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    padding: 3px 7px;
+    border-radius: 3px;
+  }
+  .logo-text { font-size: 14px; font-weight: 600; letter-spacing: 0.5px; }
+  .logo-sub { font-size: 11px; color: var(--muted); font-weight: 400; }
+  .header-right { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+
+  /* ── MAIN LAYOUT ── */
+  main { display: grid; grid-template-columns: 1fr; max-width: 1100px; margin: 0 auto; padding: 2rem; gap: 1.5rem; }
+
+  /* ── SECTION TITLES ── */
+  .section-label {
+    font-size: 10px; font-weight: 700; letter-spacing: 2px;
+    color: var(--accent); text-transform: uppercase; margin-bottom: 0.75rem;
+  }
+
+  /* ── DROP ZONE ── */
+  #dropzone {
+    border: 1px dashed var(--border2);
+    border-radius: 12px;
+    background: var(--surface);
+    padding: 3rem 2rem;
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+    position: relative;
+  }
+  #dropzone:hover, #dropzone.drag-over {
+    border-color: var(--accent);
+    background: rgba(200,168,75,0.05);
+  }
+  #dropzone input[type="file"] {
+    position: absolute; inset: 0; opacity: 0; cursor: pointer; width: 100%; height: 100%;
+  }
+  .drop-icon { font-size: 40px; margin-bottom: 1rem; opacity: 0.5; }
+  .drop-title { font-size: 18px; font-weight: 700; margin-bottom: 0.5rem; }
+  .drop-sub { font-size: 13px; color: var(--muted); font-family: var(--mono); }
+  .drop-badge {
+    display: inline-block; margin-top: 1rem;
+    background: var(--surface2); border: 1px solid var(--border2);
+    padding: 4px 12px; border-radius: 20px;
+    font-size: 11px; color: var(--accent); font-family: var(--mono);
+  }
+
+  /* ── ROM INFO BAR ── */
+  #rominfo {
+    display: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+  }
+  .info-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px,1fr)); gap: 1rem; }
+  .info-item label { font-size: 10px; color: var(--muted); letter-spacing: 1px; text-transform: uppercase; display: block; margin-bottom: 3px; }
+  .info-item span { font-size: 13px; font-family: var(--mono); color: var(--accent2); }
+
+  /* ── FILTER BAR ── */
+  #filterbar {
+    display: none;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1rem 1.25rem;
+    gap: 1rem;
+    flex-wrap: wrap;
+    align-items: center;
+  }
+  .filter-group { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+  .filter-label { font-size: 11px; color: var(--muted); white-space: nowrap; }
+  .type-btn {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--muted);
+    font-family: var(--mono);
+    font-size: 11px;
+    padding: 4px 10px;
+    border-radius: 20px;
+    cursor: pointer;
+    transition: all 0.15s;
+    white-space: nowrap;
+  }
+  .type-btn:hover { border-color: var(--border2); color: var(--text); }
+  .type-btn.active { background: var(--accent); border-color: var(--accent); color: #0a0a0f; font-weight: 600; }
+  #search-input {
+    background: var(--surface2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    font-family: var(--mono);
+    font-size: 12px;
+    padding: 5px 12px;
+    border-radius: 6px;
+    width: 220px;
+    outline: none;
+  }
+  #search-input:focus { border-color: var(--accent); }
+  #search-input::placeholder { color: var(--muted); }
+
+  /* ── STATS BAR ── */
+  #statsbar { display: none; }
+  .stats-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px,1fr)); gap: 10px; }
+  .stat-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 8px;
+    padding: 0.75rem 1rem;
+  }
+  .stat-card .s-label { font-size: 10px; color: var(--muted); text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px; }
+  .stat-card .s-val { font-size: 20px; font-weight: 700; }
+  .stat-card .s-sub { font-size: 11px; color: var(--muted); margin-top: 2px; }
+  .c-bin { color: var(--blue); }
+  .c-img { color: var(--purple); }
+  .c-snd { color: var(--green); }
+  .c-arc { color: var(--accent); }
+  .c-other { color: var(--muted); }
+
+  /* ── FILE TREE ── */
+  #filepanel { display: none; background: var(--surface); border: 1px solid var(--border); border-radius: 10px; overflow: hidden; }
+  .panel-header {
+    display: flex; align-items: center; justify-content: space-between;
+    padding: 0.75rem 1.25rem;
+    border-bottom: 1px solid var(--border);
+    background: var(--surface2);
+  }
+  .panel-title { font-size: 13px; font-weight: 600; }
+  .panel-actions { display: flex; gap: 8px; }
+  .btn {
+    background: transparent;
+    border: 1px solid var(--border2);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 11px;
+    font-weight: 600;
+    padding: 5px 14px;
+    border-radius: 6px;
+    cursor: pointer;
+    transition: all 0.15s;
+    letter-spacing: 0.5px;
+  }
+  .btn:hover { background: var(--surface2); border-color: var(--accent); color: var(--accent); }
+  .btn.primary { background: var(--accent); border-color: var(--accent); color: #0a0a0f; }
+  .btn.primary:hover { background: var(--accent2); border-color: var(--accent2); }
+  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+  .file-table { width: 100%; border-collapse: collapse; font-size: 12px; }
+  .file-table thead th {
+    text-align: left; padding: 8px 12px;
+    font-size: 10px; letter-spacing: 1px; color: var(--muted);
+    text-transform: uppercase; border-bottom: 1px solid var(--border);
+    background: var(--surface2); position: sticky; top: 0;
+    cursor: pointer; user-select: none;
+  }
+  .file-table thead th:hover { color: var(--accent); }
+  .file-table tbody tr { border-bottom: 1px solid rgba(255,255,255,0.03); transition: background 0.1s; }
+  .file-table tbody tr:hover { background: rgba(200,168,75,0.04); }
+  .file-table td { padding: 7px 12px; }
+  .file-table td:last-child { text-align: right; }
+  .td-check { width: 32px; text-align: center !important; }
+  .td-check input { cursor: pointer; accent-color: var(--accent); width: 13px; height: 13px; }
+  .file-name { font-family: var(--mono); color: var(--text); }
+  .file-path { font-family: var(--mono); font-size: 10px; color: var(--muted); margin-top: 2px; }
+  .type-badge {
+    font-family: var(--mono); font-size: 10px; padding: 2px 7px;
+    border-radius: 3px; font-weight: 500; display: inline-block;
+    background: rgba(255,255,255,0.05); border: 1px solid var(--border);
+  }
+  .size-cell { font-family: var(--mono); color: var(--muted); font-size: 11px; }
+  .id-cell { font-family: var(--mono); font-size: 10px; color: var(--muted); }
+  #file-container { max-height: 460px; overflow-y: auto; }
+  #file-container::-webkit-scrollbar { width: 4px; }
+  #file-container::-webkit-scrollbar-track { background: transparent; }
+  #file-container::-webkit-scrollbar-thumb { background: var(--border2); border-radius: 2px; }
+
+  /* ── PROGRESS ── */
+  #progress-section { display: none; }
+  .progress-bar-wrap {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    padding: 1.25rem;
+  }
+  .progress-title { font-size: 13px; font-weight: 600; margin-bottom: 0.75rem; }
+  .prog-track { background: var(--surface2); border-radius: 4px; height: 6px; overflow: hidden; margin-bottom: 8px; }
+  .prog-fill { height: 100%; background: linear-gradient(90deg, var(--accent), var(--accent2)); transition: width 0.1s; border-radius: 4px; }
+  .prog-label { font-size: 11px; color: var(--muted); font-family: var(--mono); }
+
+  /* ── NARC MODAL ── */
+  #narc-modal {
+    display: none; position: fixed; inset: 0; z-index: 200;
+    background: rgba(0,0,0,0.7); align-items: center; justify-content: center;
+  }
+  #narc-modal.open { display: flex; }
+  .modal-box {
+    background: var(--surface); border: 1px solid var(--border2);
+    border-radius: 12px; padding: 1.5rem; width: 90%; max-width: 540px;
+    max-height: 80vh; overflow-y: auto;
+  }
+  .modal-header { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; }
+  .modal-title { font-size: 16px; font-weight: 700; }
+  .modal-close { background: none; border: none; color: var(--muted); font-size: 20px; cursor: pointer; line-height: 1; }
+  .modal-close:hover { color: var(--text); }
+  .narc-file-list { font-family: var(--mono); font-size: 11px; }
+  .narc-file-item { padding: 6px 0; border-bottom: 1px solid var(--border); display: flex; justify-content: space-between; align-items: center; }
+  .narc-file-item:last-child { border-bottom: none; }
+
+  /* ── TOOLTIP ── */
+  .tooltip { position: relative; }
+  .tooltip:hover::after {
+    content: attr(data-tip);
+    position: absolute; bottom: 125%; left: 50%; transform: translateX(-50%);
+    background: var(--surface2); border: 1px solid var(--border2);
+    font-size: 11px; padding: 4px 8px; border-radius: 4px; white-space: nowrap;
+    color: var(--text); pointer-events: none; z-index: 50;
+    font-family: var(--mono);
+  }
+
+  /* ── FOOTER ── */
+  footer { text-align: center; padding: 2rem; font-size: 11px; color: var(--muted); font-family: var(--mono); border-top: 1px solid var(--border); margin-top: 1rem; }
+
+  /* ── EMPTY STATE ── */
+  .empty-state { padding: 3rem; text-align: center; color: var(--muted); font-size: 13px; }
+
+  /* Type colors */
+  .t-bin { color: var(--blue); border-color: rgba(85,136,224,0.3); background: rgba(85,136,224,0.08); }
+  .t-narc { color: var(--accent); border-color: rgba(200,168,75,0.3); background: rgba(200,168,75,0.08); }
+  .t-sdat { color: var(--green); border-color: rgba(85,192,138,0.3); background: rgba(85,192,138,0.08); }
+  .t-ncgr, .t-nclr, .t-nscr { color: var(--purple); border-color: rgba(153,102,255,0.3); background: rgba(153,102,255,0.08); }
+  .t-nsbtx { color: var(--teal); border-color: rgba(68,204,187,0.3); background: rgba(68,204,187,0.08); }
+  .t-mod { color: var(--red); border-color: rgba(224,85,85,0.3); background: rgba(224,85,85,0.08); }
+  .t-arm { color: #ff9955; border-color: rgba(255,153,85,0.3); background: rgba(255,153,85,0.08); }
+  .t-other { color: var(--muted); }
+
+  select { background: var(--surface2); border: 1px solid var(--border); color: var(--text); font-family: var(--mono); font-size: 11px; padding: 4px 8px; border-radius: 6px; outline: none; }
+  select:focus { border-color: var(--accent); }
 </style>
 </head>
 <body>
-<div class="wrap">
-  <h1>user.2.lang Converter</h1>
-  <p class="sub">Ace Attorney Trilogy — GS5 (DD) &amp; GS6 (SoJ) · Based on <a href="https://gist.github.com/osyu/5bb86d49153edef5415a7aba09a48ca1" style="color:inherit" target="_blank">gs456scr.py</a> by osyu</p>
 
-  <div class="tabs">
-    <button class="tab-btn active" onclick="switchTab('decode')">Decode</button>
-    <button class="tab-btn" onclick="switchTab('encode')">Encode</button>
-    <button class="tab-btn" onclick="switchTab('togmd')">user.2 → GMD</button>
+<header>
+  <div class="logo">
+    <span class="logo-badge">AAI-1</span>
+    <div>
+      <div class="logo-text">ROM Extractor</div>
+      <div class="logo-sub">Ace Attorney Investigations: Miles Edgeworth</div>
+    </div>
   </div>
+  <div class="header-right">NDS NitroROM · NARC · BIN · SDAT</div>
+</header>
 
-  <!-- DECODE -->
-  <div id="tab-decode" class="tab-panel active">
-    <div class="card">
-      <div class="card-title">Input file</div>
-      <label class="drop" id="drop-decode">
-        <div class="drop-icon"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
-        <span class="drop-label" id="dec-drop-text">Click or drop a user.2.lang file</span>
-        <span class="drop-hint">user.2.en · user.2.ja · user.2.fr · etc.</span>
-        <input type="file" id="dec-file-input">
-      </label>
-      <div class="meta-grid" id="dec-meta" style="display:none"></div>
-    </div>
-    <div class="card">
-      <div class="card-title">Convert <span class="card-title-right">Outputs .json matching gs456scr.py format</span></div>
-      <div class="btn-row">
-        <button class="btn btn-primary" id="btn-decode" disabled onclick="runDecode()">Decode → .json</button>
-      </div>
-      <div class="status" id="dec-status" style="display:none"><span class="dot"></span><span id="dec-status-text"></span></div>
-    </div>
-    <div class="card" id="dec-out-card" style="display:none">
-      <div class="card-title">Output</div>
-      <div class="field">
-        <label>Decoded JSON (editable before download)</label>
-        <textarea id="dec-preview" spellcheck="false"></textarea>
-      </div>
-      <div class="btn-row mt">
-        <button class="btn btn-primary" onclick="dlDecoded()">Download .json</button>
-      </div>
-      <div class="dl-meta" id="dec-dl-meta"></div>
-      <div class="preview-panel">
-        <div class="preview-tabs">
-          <button class="preview-tab active" onclick="switchDecPreview('labels')">Labels</button>
-          <button class="preview-tab" onclick="switchDecPreview('raw')">Raw JSON</button>
-        </div>
-        <div class="preview-body">
-          <div id="dec-prev-labels"><div class="empty-note">Run decode to see preview.</div></div>
-          <div id="dec-prev-raw" style="display:none"><div class="empty-note">Run decode to see preview.</div></div>
-        </div>
-      </div>
+<main>
+
+  <!-- DROP ZONE -->
+  <div>
+    <div class="section-label">Load ROM</div>
+    <div id="dropzone">
+      <input type="file" id="file-input" accept=".nds,.rom" />
+      <div class="drop-icon">📦</div>
+      <div class="drop-title">Drop your .nds ROM here</div>
+      <div class="drop-sub">or click to browse</div>
+      <div class="drop-badge">.nds · .rom · NitroROM format</div>
     </div>
   </div>
 
-  <!-- ENCODE -->
-  <div id="tab-encode" class="tab-panel">
-    <div class="card">
-      <div class="card-title">Input .json file <span class="card-title-right">Decoded by this tool or gs456scr.py</span></div>
-      <label class="drop" id="drop-encode">
-        <div class="drop-icon"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
-        <span class="drop-label" id="enc-drop-text">Click or drop a decoded .json file</span>
-        <span class="drop-hint">{ "name": "...", "labels": [["label", "text"], ...] }</span>
-        <input type="file" id="enc-file-input" accept=".json,*">
-      </label>
-    </div>
-    <div class="card">
-      <div class="card-title">Output filename</div>
-      <div class="field">
-        <label>Filename (include full extension, e.g. user.2.en)</label>
-        <input type="text" id="enc-out-name" value="user.2.en" placeholder="user.2.en">
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-title">Convert</div>
-      <div class="btn-row">
-        <button class="btn btn-primary" id="btn-encode" disabled onclick="runEncode()">Encode → binary</button>
-      </div>
-      <div class="status" id="enc-status" style="display:none"><span class="dot"></span><span id="enc-status-text"></span></div>
-    </div>
-    <div class="card" id="enc-out-card" style="display:none">
-      <div class="card-title">Output</div>
-      <div class="btn-row">
-        <button class="btn btn-primary" onclick="dlEncoded()">Download binary</button>
-      </div>
-      <div class="dl-meta" id="enc-dl-meta"></div>
+  <!-- ROM INFO -->
+  <div id="rominfo">
+    <div class="section-label">ROM Header</div>
+    <div class="info-grid">
+      <div class="info-item"><label>Game Title</label><span id="i-title">—</span></div>
+      <div class="info-item"><label>Game Code</label><span id="i-code">—</span></div>
+      <div class="info-item"><label>Maker Code</label><span id="i-maker">—</span></div>
+      <div class="info-item"><label>ROM Size</label><span id="i-size">—</span></div>
+      <div class="info-item"><label>File Count</label><span id="i-count">—</span></div>
+      <div class="info-item"><label>ARM9 Offset</label><span id="i-arm9">—</span></div>
     </div>
   </div>
 
-  <!-- USER.2 → GMD -->
-  <div id="tab-togmd" class="tab-panel">
-    <div class="card">
-      <div class="card-title">Input file</div>
-      <label class="drop" id="drop-togmd">
-        <div class="drop-icon"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
-        <span class="drop-label" id="togmd-drop-text">Click or drop a user.2.lang file</span>
-        <span class="drop-hint">user.2.en · user.2.ja · user.2.fr · etc.</span>
-        <input type="file" id="togmd-file-input">
-      </label>
-      <div class="meta-grid" id="togmd-meta" style="display:none"></div>
+  <!-- STATS BAR -->
+  <div id="statsbar">
+    <div class="section-label">File Breakdown</div>
+    <div class="stats-grid">
+      <div class="stat-card"><div class="s-label">Binary / Code</div><div class="s-val c-bin" id="cnt-bin">0</div><div class="s-sub">.bin .mod</div></div>
+      <div class="stat-card"><div class="s-label">Graphics</div><div class="s-val c-img" id="cnt-img">0</div><div class="s-sub">.ncgr .nclr .nscr .nsbtx</div></div>
+      <div class="stat-card"><div class="s-label">Audio</div><div class="s-val c-snd" id="cnt-snd">0</div><div class="s-sub">.sdat .sseq .swar</div></div>
+      <div class="stat-card"><div class="s-label">Archives</div><div class="s-val c-arc" id="cnt-arc">0</div><div class="s-sub">.narc .arc .carc</div></div>
+      <div class="stat-card"><div class="s-label">ARM Code</div><div class="s-val" style="color:#ff9955" id="cnt-arm">0</div><div class="s-sub">arm9 arm7 overlays</div></div>
+      <div class="stat-card"><div class="s-label">Other</div><div class="s-val c-other" id="cnt-other">0</div><div class="s-sub">misc files</div></div>
     </div>
-    <div class="card">
-      <div class="card-title">Target GMD version</div>
-      <div class="seg-ctrl">
-        <button class="seg-btn active" id="togmd-v1-btn" onclick="setTogmdVer(1)">GMD V1 · GS5</button>
-        <button class="seg-btn" id="togmd-v2-btn" onclick="setTogmdVer(2)">GMD V2 · GS6</button>
-      </div>
-      <div class="xor-note" id="togmd-xor-note">V1 (GS5 / Dual Destinies) — XOR encryption will be applied.</div>
+  </div>
+
+  <!-- FILTER BAR -->
+  <div id="filterbar">
+    <div class="filter-group">
+      <span class="filter-label">Filter:</span>
+      <button class="type-btn active" data-type="all">All</button>
+      <button class="type-btn" data-type="binary">Binary</button>
+      <button class="type-btn" data-type="graphics">Graphics</button>
+      <button class="type-btn" data-type="audio">Audio</button>
+      <button class="type-btn" data-type="archive">Archive</button>
+      <button class="type-btn" data-type="arm">ARM Code</button>
     </div>
-    <div class="card">
-      <div class="card-title">Game <span class="card-title-right">Sets opcode mapping for tag conversion</span></div>
-      <div class="seg-ctrl">
-        <button class="seg-btn active" id="togmd-dd-btn" onclick="setTogmdGame('dd')">Dual Destinies (DD)</button>
-        <button class="seg-btn" id="togmd-soj-btn" onclick="setTogmdGame('soj')">Spirit of Justice (SoJ)</button>
-      </div>
+    <div class="filter-group">
+      <input type="text" id="search-input" placeholder="Search filename…" />
+      <select id="sort-select">
+        <option value="id">Sort: ID</option>
+        <option value="name">Sort: Name</option>
+        <option value="size-desc">Sort: Size ↓</option>
+        <option value="size-asc">Sort: Size ↑</option>
+        <option value="type">Sort: Type</option>
+      </select>
     </div>
-    <div class="card">
-      <div class="card-title">GMD metadata <span class="card-title-right">Required to build a valid GMD</span></div>
-      <div class="grid2">
-        <div class="field">
-          <label>Language</label>
-          <select id="togmd-lang">
-            <option value="English">English</option>
-            <option value="Japanese">Japanese</option>
-            <option value="French">French</option>
-            <option value="Spanish">Spanish</option>
-            <option value="German">German</option>
-            <option value="Italian">Italian</option>
-          </select>
-        </div>
-        <div class="field">
-          <label>GMD internal filename</label>
-          <input type="text" id="togmd-gmd-name" placeholder="e.g. scr_save_select" value="">
-        </div>
-      </div>
-    </div>
-    <div class="card">
-      <div class="card-title">Pipeline <span class="card-title-right">user.2 binary → labels → GMD binary</span></div>
-      <div class="btn-row">
-        <button class="btn btn-primary" id="btn-togmd" disabled onclick="runToGmd()">Convert user.2 → GMD</button>
-      </div>
-      <div class="status" id="togmd-status" style="display:none"><span class="dot"></span><span id="togmd-status-text"></span></div>
-    </div>
-    <div class="card" id="togmd-out-card" style="display:none">
-      <div class="card-title">Output</div>
-      <div class="btn-row">
-        <button class="btn btn-primary" onclick="dlTogmd()">Download .gmd</button>
-      </div>
-      <div class="dl-meta" id="togmd-dl-meta"></div>
-      <div class="preview-panel">
-        <div class="preview-tabs">
-          <button class="preview-tab active" onclick="switchTogmdPreview('labels')">Labels</button>
-          <button class="preview-tab" onclick="switchTogmdPreview('raw')">Raw</button>
-        </div>
-        <div class="preview-body">
-          <div id="togmd-prev-labels"><div class="empty-note">Run conversion to see preview.</div></div>
-          <div id="togmd-prev-raw" style="display:none"><div class="empty-note">Run conversion to see preview.</div></div>
-        </div>
+  </div>
+
+  <!-- FILE LIST PANEL -->
+  <div id="filepanel">
+    <div class="panel-header">
+      <div class="panel-title" id="panel-title">Files</div>
+      <div class="panel-actions">
+        <button class="btn" id="select-all-btn">Select All</button>
+        <button class="btn" id="select-none-btn">None</button>
+        <button class="btn primary" id="extract-btn">⬇ Extract Selected</button>
+        <button class="btn" id="extract-all-btn">⬇ Extract All</button>
       </div>
     </div>
+    <div id="file-container">
+      <table class="file-table">
+        <thead>
+          <tr>
+            <th class="td-check"><input type="checkbox" id="master-check"/></th>
+            <th>File</th>
+            <th>Type</th>
+            <th>Size</th>
+            <th>ID</th>
+          </tr>
+        </thead>
+        <tbody id="file-tbody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- PROGRESS -->
+  <div id="progress-section">
+    <div class="progress-bar-wrap">
+      <div class="progress-title" id="prog-title">Processing…</div>
+      <div class="prog-track"><div class="prog-fill" id="prog-fill" style="width:0%"></div></div>
+      <div class="prog-label" id="prog-label">0 / 0 files</div>
+    </div>
+  </div>
+
+</main>
+
+<!-- NARC MODAL -->
+<div id="narc-modal">
+  <div class="modal-box">
+    <div class="modal-header">
+      <div class="modal-title" id="modal-title">NARC Contents</div>
+      <button class="modal-close" id="modal-close">✕</button>
+    </div>
+    <div id="narc-content"></div>
   </div>
 </div>
+
+<footer>
+  AAI-1 NDS ROM Extractor · NitroROM filesystem · NARC · ARM9/ARM7 · SDAT · graphics formats<br>
+  Extracts all files into a ZIP preserving directory structure
+</footer>
+
 <script>
-// ── UI ──────────────────────────────────────────────────────────────────────
-const TABS=['decode','encode','togmd'];
-function switchTab(n){
-  document.querySelectorAll('.tab-btn').forEach((b,i)=>b.classList.toggle('active',TABS[i]===n));
-  TABS.forEach(t=>document.getElementById('tab-'+t).classList.toggle('active',t===n));
+/* ═══════════════════════════════════════════════════════════════════
+   NDS ROM PARSER — NitroROM Filesystem
+   Based on GBATEK NDS format documentation
+═══════════════════════════════════════════════════════════════════ */
+
+let romBuffer = null;
+let allFiles = [];
+let filteredFiles = [];
+let activeType = 'all';
+let sortMode = 'id';
+
+const $ = id => document.getElementById(id);
+
+// ── Utils ──
+function readU32LE(buf, off) {
+  const v = new DataView(buf);
+  return v.getUint32(off, true);
 }
-function setStatus(id,msg,cls){
-  const el=document.getElementById(id);
-  el.className='status '+(cls||'');el.style.display='flex';
-  el.querySelector('span:last-child').textContent=msg;
+function readU16LE(buf, off) {
+  const v = new DataView(buf);
+  return v.getUint16(off, true);
 }
-function setMeta(gid,pairs){
-  const g=document.getElementById(gid);
-  g.innerHTML=pairs.map(([l,v])=>`<div class="metric"><div class="metric-label">${l}</div><div class="metric-val" title="${v}">${v}</div></div>`).join('');
-  g.style.display='grid';
+function readStr(buf, off, len) {
+  const bytes = new Uint8Array(buf, off, len);
+  let s = '';
+  for (let b of bytes) { if (b === 0) break; s += String.fromCharCode(b); }
+  return s;
 }
-function fmtB(b){return b<1024?b+' B':b<1<<20?(b/1024).toFixed(1)+' KB':(b/(1<<20)).toFixed(2)+' MB';}
-function base(n){return n.replace(/(\.[^.]+)+$/,'');}
-function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');}
-function setupDrop(did,iid,cb){
-  const z=document.getElementById(did),inp=document.getElementById(iid);
-  z.addEventListener('dragover',e=>{e.preventDefault();z.classList.add('dragover');});
-  z.addEventListener('dragleave',()=>z.classList.remove('dragover'));
-  z.addEventListener('drop',e=>{e.preventDefault();z.classList.remove('dragover');const f=e.dataTransfer.files[0];if(f)cb(f);});
-  inp.addEventListener('change',()=>{const f=inp.files[0];if(f)cb(f);});
+function fmtSize(n) {
+  if (n < 1024) return n + ' B';
+  if (n < 1048576) return (n/1024).toFixed(1) + ' KB';
+  return (n/1048576).toFixed(2) + ' MB';
 }
-function dlBlob(blob,name){const u=URL.createObjectURL(blob),a=document.createElement('a');a.href=u;a.download=name;a.click();setTimeout(()=>URL.revokeObjectURL(u),3000);}
-function readAB(f){return new Promise((r,j)=>{const x=new FileReader();x.onload=e=>r(e.target.result);x.onerror=j;x.readAsArrayBuffer(f);});}
-function readTxt(f){return new Promise((r,j)=>{const x=new FileReader();x.onload=e=>r(e.target.result);x.onerror=j;x.readAsText(f,'utf-8');});}
-
-// ── CONSTANTS (gs456scr.py) ─────────────────────────────────────────────────
-const USRHDR=48;
-const CLS56=[0x83f3f042,0x0b263156];
-const CLSNAM=[0xee933aa7,0x1aa1a4ac];
-const rup=(x,l)=>Math.ceil(x/l)*l;
-
-// ── WRITER ──────────────────────────────────────────────────────────────────
-class W{
-  constructor(){this.c=[];this.s=0;}
-  w(d){const a=d instanceof Uint8Array?d:new Uint8Array(d);this.c.push(a);this.s+=a.length;}
-  u8(v){this.w([v]);}
-  u32(v){const b=new ArrayBuffer(4);new DataView(b).setUint32(0,v>>>0,true);this.w(new Uint8Array(b));}
-  str(s){this.w(new TextEncoder().encode(s));}
-  pad(n){if(this.s%n)this.w(new Uint8Array(n-this.s%n));}
-  out(){const o=new Uint8Array(this.s);let p=0;for(const c of this.c){o.set(c,p);p+=c.length;}return o;}
+function guessExt(buf, off, size) {
+  if (size < 4) return 'bin';
+  const b = new Uint8Array(buf, off, Math.min(8, size));
+  const h = (b[0]<<24)|(b[1]<<16)|(b[2]<<8)|b[3];
+  // NARC: "NARC" = 0x4352414E (little-endian = CRAN)
+  if (b[0]===0x4E&&b[1]===0x41&&b[2]===0x52&&b[3]===0x43) return 'narc';
+  // SDAT: "SDAT"
+  if (b[0]===0x53&&b[1]===0x44&&b[2]===0x41&&b[3]===0x54) return 'sdat';
+  // NCGR: "RGCN"
+  if (b[0]===0x52&&b[1]===0x47&&b[2]===0x43&&b[3]===0x4E) return 'ncgr';
+  // NCLR: "RLCN"
+  if (b[0]===0x52&&b[1]===0x4C&&b[2]===0x43&&b[3]===0x4E) return 'nclr';
+  // NSCR: "RCSN"
+  if (b[0]===0x52&&b[1]===0x43&&b[2]===0x53&&b[3]===0x4E) return 'nscr';
+  // NSBTX: "BTX0"
+  if (b[0]===0x42&&b[1]===0x54&&b[2]===0x58&&b[3]===0x30) return 'nsbtx';
+  // NSBMD: "BMD0"
+  if (b[0]===0x42&&b[1]===0x4D&&b[2]===0x44&&b[3]===0x30) return 'nsbmd';
+  // NSBCA: "BCA0"
+  if (b[0]===0x42&&b[1]===0x43&&b[2]===0x41&&b[3]===0x30) return 'nsbca';
+  // LZ77 compressed
+  if (b[0]===0x10||b[0]===0x11) return 'bin.lz';
+  // SSEQ
+  if (b[0]===0x53&&b[1]===0x53&&b[2]===0x45&&b[3]===0x51) return 'sseq';
+  // SWAR
+  if (b[0]===0x53&&b[1]===0x57&&b[2]===0x41&&b[3]===0x52) return 'swar';
+  // SBNK
+  if (b[0]===0x53&&b[1]===0x42&&b[2]===0x4E&&b[3]===0x4B) return 'sbnk';
+  return 'bin';
 }
 
-// ── UTF-16LE (mirrors gs456scr.py read_str / write_str) ─────────────────────
-// read_str(f,l): f.read(l*2).decode('utf-16le')[:-1]
-// write_str(f,x): f.write((x+'\0').encode('utf-16le'))
-function rdStr(u8,n){let s='';for(let i=0;i<n-1;i++)s+=String.fromCharCode(u8[i*2]|(u8[i*2+1]<<8));return s;}
-function wrStr(s){const b=new Uint8Array((s.length+1)*2),d=new DataView(b.buffer);for(let i=0;i<s.length;i++)d.setUint16(i*2,s.charCodeAt(i),true);return b;}
+function typeCategory(ext) {
+  if (['narc','arc','carc'].includes(ext)) return 'archive';
+  if (['ncgr','nclr','nscr','nsbtx','nsbmd','nsbca'].includes(ext)) return 'graphics';
+  if (['sdat','sseq','swar','sbnk','mod'].includes(ext)) return 'audio';
+  if (['arm9','arm7','overlay'].includes(ext)) return 'arm';
+  return 'binary';
+}
 
-// ── DECODE (faithful port of gs456scr.py decode()) ──────────────────────────
-function decodeU2(buf){
-  const u8=new Uint8Array(buf),dv=new DataView(buf);
-  let p=0;
-  const ok=(c,m)=>{if(!c)throw new Error(m);};
-  const r4=()=>{const v=dv.getUint32(p,true);p+=4;return v;};
-  const r8=()=>{const v=dv.getUint32(p,true);p+=8;return v;}; // lo only, hi always 0
-  const sp=(n)=>{p=rup(p,n);};
+function typeClass(ext) {
+  const cat = typeCategory(ext);
+  if (cat === 'archive') return 't-narc';
+  if (cat === 'graphics') return ext === 'nsbtx' || ext === 'nsbmd' ? 't-nsbtx' : 't-ncgr';
+  if (cat === 'audio') return 't-sdat';
+  if (cat === 'arm') return 't-arm';
+  return 't-bin';
+}
 
-  // USR header
-  ok(u8[0]===85&&u8[1]===83&&u8[2]===82&&u8[3]===0,'Not a USR file');
-  p=4;
-  ok(r4()===0&&r4()===0&&r4()===0,'USR counts must be 0');
-  for(let i=0;i<3;i++){const v=r8();ok(v===USRHDR,`USR offset[${i}] must be ${USRHDR}`);}
-  sp(16); ok(p===USRHDR,'USR header size mismatch');
+/* ── PARSE NDS ROM ── */
+function parseNDS(buf) {
+  const files = [];
 
-  // RSZ block
-  const rb=p;
-  ok(u8[p]===82&&u8[p+1]===83&&u8[p+2]===90&&u8[p+3]===0,'RSZ magic not found');
-  p+=4;
-  ok(r4()===16,'RSZ version must be 16');
-  ok(r4()===1,'RSZ object count must be 1');
-  const ic=r4()-1; ok(ic>0,'instance_count must be >0');
-  ok(r4()===0,'RSZ userdata count must be 0');
-  ok(r4()===0,'RSZ reserved must be 0');
-  const ioff=r8(),doff=r8(),uoff=r8();
-  ok(uoff===doff,'userdata_offset must equal data_offset');
-  ok(r4()===ic,'object table count mismatch');
-  ok(p===rb+ioff,`instance_offset mismatch: expected ${rb+ioff} got ${p}`);
-  ok(r4()===0&&r4()===0,'null entry must be 0');
+  // ── Header ──
+  const gameTitle  = readStr(buf, 0x000, 12);
+  const gameCode   = readStr(buf, 0x00C, 4);
+  const makerCode  = readStr(buf, 0x010, 2);
+  const arm9Offset = readU32LE(buf, 0x020);
+  const arm9Size   = readU32LE(buf, 0x02C);
+  const arm7Offset = readU32LE(buf, 0x030);
+  const arm7Size   = readU32LE(buf, 0x03C);
+  const fntOffset  = readU32LE(buf, 0x040);
+  const fntSize    = readU32LE(buf, 0x044);
+  const fatOffset  = readU32LE(buf, 0x048);
+  const fatSize    = readU32LE(buf, 0x04C);
+  const ov9Offset  = readU32LE(buf, 0x050);
+  const ov9Size    = readU32LE(buf, 0x054);
+  const ov7Offset  = readU32LE(buf, 0x058);
+  const ov7Size    = readU32LE(buf, 0x05C);
+  const romSize    = readU32LE(buf, 0x080);
 
-  // class entries
-  for(let i=0;i<ic;i++){
-    const tid=r4(),crc=r4();
-    if(tid===CLS56[0]&&crc===CLS56[1]){ok(i!==ic-1,'GS56 class at last slot');}
-    else if(tid===CLSNAM[0]&&crc===CLSNAM[1]){ok(i===ic-1,'NAME class not at last slot');}
-    else throw new Error(`Unknown class @${i}: 0x${tid.toString(16)} 0x${crc.toString(16)}`);
+  // Update header UI
+  $('i-title').textContent  = gameTitle || '(unknown)';
+  $('i-code').textContent   = gameCode || '—';
+  $('i-maker').textContent  = makerCode || '—';
+  $('i-size').textContent   = fmtSize(buf.byteLength);
+  $('i-arm9').textContent   = '0x' + arm9Offset.toString(16).toUpperCase();
+
+  // ── ARM9 & ARM7 as files ──
+  files.push({ id: 'arm9', name: 'arm9.bin', path: 'code/', ext: 'arm9', offset: arm9Offset, size: arm9Size, category: 'arm' });
+  files.push({ id: 'arm7', name: 'arm7.bin', path: 'code/', ext: 'arm7', offset: arm7Offset, size: arm7Size, category: 'arm' });
+
+  // ── Overlay tables ──
+  const ov9Count = ov9Size / 32;
+  for (let i = 0; i < ov9Count; i++) {
+    const base = ov9Offset + i * 32;
+    if (base + 32 > buf.byteLength) break;
+    const fileId    = readU32LE(buf, base + 4);
+    const compSize  = readU32LE(buf, base + 8);
+    const origSize  = readU32LE(buf, base + 12);
+    if (fatOffset + (fileId+1)*8 > buf.byteLength) continue;
+    const start = readU32LE(buf, fatOffset + fileId * 8);
+    const end   = readU32LE(buf, fatOffset + fileId * 8 + 4);
+    const sz    = end - start;
+    if (start === 0 || sz <= 0 || start + sz > buf.byteLength) continue;
+    files.push({ id: 'ov9_' + i, name: `overlay9_${String(i).padStart(4,'0')}.bin`, path: 'overlays/arm9/', ext: 'overlay', offset: start, size: sz, category: 'arm' });
   }
 
-  sp(16); ok(p===rb+doff,`data offset mismatch: expected ${rb+doff} got ${p}`);
-
-  // data
-  const data={name:'',labels:[]};
-  for(let i=0;i<ic-1;i++){
-    const ls=r4(),lab=rdStr(u8.subarray(p),ls);p+=ls*2;sp(4);
-    const ts=r4(),txt=rdStr(u8.subarray(p),ts);p+=ts*2;sp(4);
-    data.labels.push([lab,txt]);
-  }
-  const ns=r4();data.name=rdStr(u8.subarray(p),ns);p+=ns*2;sp(4);
-  // trailing index table verification
-  ok(r4()===ic-1,'trailing count mismatch');
-  for(let i=0;i<ic-1;i++)ok(r4()===i+1,`trailing index ${i} mismatch`);
-  return data;
-}
-
-// ── ENCODE (faithful port of gs456scr.py encode()) ──────────────────────────
-function encodeU2(data){
-  const ic=data.labels.length+1;
-  const ds=new W();
-  for(const[lab,txt]of data.labels){
-    ds.u32(lab.length+1);ds.w(wrStr(lab));ds.pad(4);
-    ds.u32(txt.length+1);ds.w(wrStr(txt));ds.pad(4);
-  }
-  ds.u32(data.name.length+1);ds.w(wrStr(data.name));ds.pad(4);
-  // trailing index table
-  ds.u32(ic-1);for(let i=0;i<ic-1;i++)ds.u32(i+1);
-  const db=ds.out();
-
-  // offsets relative to RSZ base (USRHDR)
-  const ioff=52; // hardcoded per gs456scr.py
-  const doff=rup(ioff+8*(ic+1),16);
-
-  const rsz=new W();
-  rsz.w([82,83,90,0]);rsz.u32(16);rsz.u32(1);rsz.u32(ic+1);rsz.u32(0);rsz.u32(0);
-  rsz.u32(ioff);rsz.u32(0); // instance_offset u64
-  rsz.u32(doff);rsz.u32(0); // data_offset u64
-  rsz.u32(doff);rsz.u32(0); // userdata_offset u64
-  rsz.u32(ic);rsz.u32(0);rsz.u32(0); // object table + null
-  for(let i=0;i<ic-1;i++){rsz.u32(CLS56[0]);rsz.u32(CLS56[1]);}
-  rsz.u32(CLSNAM[0]);rsz.u32(CLSNAM[1]);
-  rsz.pad(16); rsz.w(db);
-
-  const usr=new W();
-  usr.w([85,83,82,0]);usr.u32(0);usr.u32(0);usr.u32(0);
-  for(let i=0;i<3;i++){usr.u32(USRHDR);usr.u32(0);}
-  usr.pad(16); usr.w(rsz.out());
-  return usr.out();
-}
-
-// ── GMD CONSTANTS (Trite699/GMD-Converter-Web) ──────────────────────────────
-const VER_TO={1:66049,2:66306};
-const LANG_TO={Japanese:0,English:1,French:2,Spanish:3,German:4,Italian:5};
-const rfull=s=>s.replace(/[\uFF00-\uFFEF]/g,'###');
-const CRC32T=(()=>{const t=new Uint32Array(256);for(let i=0;i<256;i++){let c=i;for(let j=0;j<8;j++)c=c&1?0xEDB88320^(c>>>1):c>>>1;t[i]=c;}return t;})();
-const crc32=s=>{const e=new TextEncoder().encode(s);let c=0xFFFFFFFF;for(const b of e)c=CRC32T[(c^b)&0xFF]^(c>>>8);return(c^0xFFFFFFFF)>>>0;};
-const calcHash=l=>[(~crc32(l+l))>>>0,(~crc32(l+l+l))>>>0];
-function xor(data,ver=1){
-  const k1=ver===1?"fjfajfahajra;tira9tgujagjjgajgoa":"e43bcc7fcab+a6c4ed22fcd433/9d2e6cb053fa462-463f3a446b19";
-  const k2=ver===1?"mva;eignhpe/dfkfjgp295jtugkpejfu":"861f1dca05a0;9ddd5261e5dcc@6b438e6c.8ba7d71c*4fd11f3af1";
-  const o=new Uint8Array(data.length);
-  for(let i=0;i<data.length;i++)o[i]=data[i]^k1.charCodeAt(i%k1.length)^k2.charCodeAt(i%k2.length);
-  return o;
-}
-
-// ── TAG MAPPINGS (Trite699/GMD-Converter-Web DD_MAPPING + SOJ_MAPPING + SOJ_OVERWRITE) ──
-const DD_MAP={
-  "CNTR":"CENTER","ICON PAD_X":"ICN 2","ICON PAD_L":"ICN 4","ICON PAD_R":"ICN 5",
-  "ICON PAD_CROSS":"ICN 9","ICON PAD_SLIDE":"ICN 8",
-  "E001":"_END_","E003":"w","E004":"JUMP","E005":"c0","E006":"c1","E007":"c2","E008":"c3","E009":"c4",
-  "E020":"REG_SET","E021":"B_REG","E022":"B_RAND","E023":"p","E024":"pa","E025":"s","E026":"CALL",
-  "E027":"pdm","E028":"FLAG_ON","E029":"FLAG_OFF","E030":"B_FLAG","E031":"SCENE_JUMP",
-  "E032":"B_SCE_JUMP","E033":"CALL_EXTERNAL","E037":"REG_ADD","E040":"WND","E041":"MSG",
-  "E050":"B_FLAGS","E051":"B_FLAGS_SET","E052":"B_SCENE","E053":"MSG_SKIP_INVALID","E054":"msg_se",
-  "E056":"COURT_FILE_BTN_VISIBLE","E057":"OP_TITLE","E060":"THUMB_ON","E061":"THUMB_OFF",
-  "E062":"THUMB_ON_SCREEN","E065":"FILTER_SET","E066":"FILTER_WAIT","E070":"FADE",
-  "E071":"FADE_WAIT","E072":"FADE_BG","E073":"FADE_BG_WAIT","E074":"FADE_MODEL",
-  "E075":"FADE_MODEL_WAIT","E077":"FADE_KAISOU_OUT","E078":"FADE_KAISOU_NOCAM_OUT",
-  "E081":"BGM_CONTEXT","E082":"BGM_WAIT","E083":"BGM_SWAP","E084":"BGM_FADE_OUT_OF",
-  "E085":"BGM_PLAY","E086":"SE_PLAY","E087":"BGM_STOP","E088":"SE_STOP","E089":"BGM_VOLUME",
-  "E090":"SE_VOLUME","E091":"BGM_FADE_IN","E092":"BGM_FADE_OUT","E093":"SE_FADE_IN",
-  "E094":"SE_FADE_OUT","E097":"SE_WAIT","E098":"SE_KEYOFF","E099":"SE_VOLUME_OF",
-  "E100":"ITEM_ADD","E101":"ITEM_REMOVE","E102":"ITEM_REMOVE_ALL","E103":"EVIDENCE_GET",
-  "E104":"egw","E105":"EVIDENCE_UPDATE","E106":"ITEM_UPDATE","E107":"B_ITEM","E108":"B_ITEMS",
-  "E109":"B_ITEMS_SET","E110":"FADE_KAISOU_OUT2","E111":"FADE_KAISOU_NOCAM_OUT2",
-  "E113":"BGM_WAIT_OF","E114":"BGM_PLAY_STAFFROLL","E115":"INV_SET_ANOTHER_CUT",
-  "E116":"INV_DETAIL_CAM_SET","E117":"BG_ORNAMENT_FADE_IN","E118":"BG_ORNAMENT_FADE_OUT",
-  "E119":"BG_ORNAMENT_FADE_WAIT","E120":"BG_SET","E121":"BG_ORNAMENT","E122":"USE_BG_CAMERA_ONLY",
-  "E123":"BG_CHANGE","E124":"SELECT_POTTERY","E125":"CHR_STOP_SE","E127":"CHR_WAIT_ODOROKI",
-  "E128":"CHR_ANIME_NOSTART_ODOROKI","E129":"CHR_ANIME_SPECIAL_ODOROKI","E130":"CAM_SET",
-  "E131":"CAM_WAIT","E132":"CAM_SET_FRAME","E133":"CAM_RESUME","E134":"CHR_ANIME_ODOROKI",
-  "E135":"CHR_POS_SET","E136":"CHR_DEL_2D_OR_3D","E137":"CHR_SET_2D_OR_3D",
-  "E138":"CHR_WAIT_WITHOUT_MOT","E139":"CHR_WAIT_EVENT","E140":"CHR_SET","E141":"CHR_DEL",
-  "E142":"CHR_BST_SET","E143":"CHR_BST_DEL","E144":"CHR_WAIT","E145":"CHR_ANIME",
-  "E146":"CHR_ANIME_SE","E147":"CHR_ANIME_NOSTART","E148":"CHR_SET_NOSTART",
-  "E149":"CHR_BST_SET_NOSTART","E150":"CHR_FORCE_MOUSE","E152":"CHR_LOAD","E153":"CHR_UNLOAD",
-  "E154":"CHR_POS","E155":"CHR_BST_POS","E156":"CHR_MAT_CHG","E157":"CHR_VISIBLE",
-  "E158":"B_CHR_SET","E159":"CHR_PARTS_DISP","E160":"CHR_ANIME_REP","E161":"CHR_UNLOAD_ALL",
-  "E162":"CHR_SET_CHILD","E163":"CHR_BST_SET_CHILD","E164":"CHR_ANIME_SPECIAL",
-  "E165":"CHR_ANIME_SPECIAL_NO_SE","E166":"GADGET_FADE","E167":"GADGET_ANIME",
-  "E168":"GADGET_COLOR","E169":"CHR_MOUTH","E170":"CHR_ALPHA","E172":"MNK_UNLOAD",
-  "E173":"MNK_LOAD","E174":"MNK_FORCE_START","E175":"MNK_INDUCTION_DEMO","E176":"MNK_BUTTON",
-  "E177":"MNK_LABEL","E178":"MNK_START","E179":"MNK_MSG_SET","E180":"MNK_MSG",
-  "E181":"MNK_CHR_SET","E183":"mnp","E184":"mn_seg","E185":"mn_ans","E186":"MNK_CLEAR",
-  "E187":"MNK_MSG_INIT","E188":"MNK_START_TUTORIAL","E189":"MNK_TUTORIAL_CURSOR_WAIT",
-  "E190":"BIG_FONT","E191":"BIG_FONT_WAIT","E192":"MNK_TEXT_START_TUTORIAL",
-  "E193":"MARK_CONFALENCE","E194":"MARK_TSTMNY","E195":"TESTIMONY","E196":"tw",
-  "E197":"COURT_IN","E198":"COURT_IN_WAIT","E201":"NOT_GUILTY","E202":"NOT_GUILTY_WAIT",
-  "E205":"EXAMINE","E206":"ew","E207":"SCENARIO_MODE","E208":"HAMMER_PLAY","E209":"HAMMER_WAIT",
-  "E210":"DEMO_PLAY","E211":"DEMO_WAIT","E212":"pig","E213":"HAMMER_PLAY_STOP_BGM",
-  "E214":"NOW_DATA_SET","E215":"MNK_TUTORIAL_CONT_LABEL","E216":"PSY_KOKONE_END",
-  "E217":"PSY_KOKONE_CLEAR","E218":"INV_EVI_GOTO","E220":"CHOICE_START","E221":"CHOICE_INIT",
-  "E222":"CHOICE_SET","E223":"CHOICE_JUMP","E224":"THRUST_FORCE","E225":"B_THRUST_FORCE",
-  "E226":"B_THRUST_FORCE_2","E227":"PSY_LOAD","E228":"PSY_BUTTON","E229":"PSY_LABEL_SET",
-  "E230":"PSY_LOCK_BREAK","E231":"PSY_CLEAR","E232":"PSY_INDUCTION_START",
-  "E233":"PSY_INDUCTION_END","E234":"PSY_END","E235":"PSY_ROCK_SET","E237":"PSY_ROCK_BLACK",
-  "E238":"PSY_FORCE_END","E239":"PSY_START_NO_DEMO","E240":"EXAM_MESS_INIT",
-  "E241":"EXAM_MESS_SET","E242":"EXAM_MESS_END","E243":"EXAM_START","E244":"EXAM_ANSWER_SET",
-  "E245":"EXAM_MESS_NEXT_SET","E246":"PSY_UNLOAD","E247":"PSY_KOKONE_BREAK_SETUP",
-  "E248":"B_EXAM_NEXT_FOLLOW","E249":"B_EXAM_FAILD","E250":"PSY_THRUST_ANSWER_SET",
-  "E252":"STAFFROLL_TIMER","E253":"STAFFROLL_TIMER_WAIT","E254":"STAFFROLL_2_WAIT",
-  "E255":"B_THRUST_FORCE_NO_KURAE","E256":"PSY_KOKONE_BREAK","E257":"PSY_KOKONE_BREAK_WAIT",
-  "E258":"PLAYER_SET","E259":"PARTNER_SET","E260":"MSG_EXAM_PARTNER","E261":"PARTNER_OFF",
-  "E266":"PARTNER_EXAM_NEXT_SET","E267":"PARTNER_HINT_LABEL_SET",
-  "E268":"PARTNER_DAMAGE_COUNT_RESET","E270":"STAFFROLL_OPEN","E271":"STAFFROLL_CLOSE",
-  "E272":"STAFFROLL_INIT","E273":"STAFFROLL_END","E274":"STAFFROLL_2_INIT",
-  "E275":"STAFFROLL_2_START","E276":"STAFFROLL_2_END","E277":"INV_EVIDENCE_START_TUTORIAL",
-  "E279":"GAUGE_PREDAMAGE","E280":"GAUGE_IN","E281":"GAUGE_OUT","E282":"GAUGE_WAIT",
-  "E283":"GAUGE_DAMAGE","E284":"B_LIFE_ZERO","E285":"GAME_OVER","E286":"GAUGE_RESET",
-  "E287":"RETRY_ITEM_STORE","E288":"GAME_OVER_PANEL_ONLY","E289":"INV_USE_2D_CAMERA",
-  "E290":"INV_EVIDENCE_DEMO","E291":"INV_EVIDENCE_FINISH","E292":"INV_EVIDENCE_INIT",
-  "E293":"INV_EVIDENCE_START","E294":"TV_WAIT","E295":"TV_PO_INIT","E296":"TV_OPEN",
-  "E297":"TV_NEXT","E298":"TV_SET","E299":"TV_CLOSE","E300":"EVENT_SHOW","E301":"EVENT_END",
-  "E302":"TEXTCUT_SHOW","E303":"TEXTCUT_END","E304":"EVENT_FADE_SWAP","E305":"EVENT_FADE_WAIT",
-  "E306":"PO_INIT","E307":"PO_START","E308":"PO_POINT_CLOSE","E309":"PO_EVENT_CLOSE",
-  "E310":"PO_FINISH","E311":"INV_INIT","E312":"INV_CAM_ADD","E313":"INV_LABEL_SET",
-  "E315":"INV_DETAIL_CAM","E316":"INV_CAM_WAIT","E317":"INV_CAM_RET","E318":"INV_HIT_SET",
-  "E319":"INV_MOT_SET","E320":"INV_MOT_WAIT","E321":"INV_CAM_SET","E322":"INV_COND_ADD",
-  "E324":"INV_OPEN","E326":"INV_EVI_FLAG_SET","E327":"B_HIT_EVIDENCE","E329":"BG_USE_COLOR",
-  "E330":"aya","E331":"dam","E332":"gek","E333":"hir","E334":"kia","E335":"sho",
-  "E336":"dm0","E338":"f","E339":"f2","E340":"fw","E341":"q0","E342":"q1","E343":"q2",
-  "E345":"bak","E346":"skn","E354":"PARTNER_HINT_ENABLE","E369":"DTC_INIT",
-  "E370":"DTC_INDEX_INIT","E371":"DTC_MODE","E372":"DTC_INDEX_TALK","E373":"DTC_INDEX_INVEST",
-  "E374":"DTC_INDEX_MOVE","E375":"DTC_INDEX_THRUST","E376":"DTC_TALK_FORCE_IN",
-  "E377":"DTC_TALK_SET","E378":"DTC_TALK_UPDATE","E379":"DTC_THRUST_INIT",
-  "E380":"DTC_THRUST_SET","E381":"B_DTC_THRUST","E382":"DTC_INDEX_INIT_END",
-  "E383":"DTC_INV_LABEL","E384":"B_DTC_SETUP","E385":"DTC_TOPIC_INIT","E386":"DTC_MOVE_SET",
-  "E388":"DTC_MOVE_FLAG","E390":"DTC_END_INIT","E391":"DTC_END_ITEM_SET",
-  "E392":"DTC_END_FLAG_SET","E393":"DTC_START","E394":"B_DTC_END","E397":"INTERVAL",
-  "E398":"KOKORO_RANDOM_NOISE_START","E399":"KOKORO_RANDOM_NOISE_END","E400":"KOKORO_INIT",
-  "E401":"KOKORO_END","E402":"KOKORO_DEMO","E403":"KOKORO_SET_PHRASE",
-  "E404":"KOKORO_UPDATE_EXAM","E405":"KOKORO_UPDATE","E406":"KOKORO_TUTO_NOISE_START",
-  "E407":"KOKORO_TUTO_NOISE_END","E409":"KOKORO_SET_CAPTION",
-  "E410":"KOKORO_EXAM_TESTIMONY_SET_EX","E411":"KOKORO_UPDATE_DELAY","E412":"KOKORO_WAIT",
-  "E413":"KOKORO_EXAM_TESTIMONY_SET","E414":"KOKORO_EXAM_MESS_SET","E416":"B_KOKORO_PHRASE",
-  "E417":"KOKORO_SAGURU_ADD_HIT_MASK","E418":"KOKORO_TUKITO_ADD_TESTIMONY_EX",
-  "E419":"KOKORO_BGM","E421":"KOKORO_SAGURU_ADD_TESTIMONY","E422":"KOKORO_SAGURU_ADD_PHRASE",
-  "E423":"KOKORO_NOISE","E425":"KOKORO_SAGURU","E426":"KOKORO_TUKITO_ADD_TESTIMONY",
-  "E427":"KOKORO_TUKITO_ADD_PHRASE","E428":"KOKORO_TUKITO","E429":"KOKORO_TUKITO_TUTO_PHRASE",
-  "E430":"KOKORO_TUTO_IN","E431":"KOKORO_TUTO_OUT","E432":"KOKORO_TUTO_SET_ICON",
-  "E433":"KOKORO_TUKITO_TUTO_IN","E434":"KOKORO_TUKITO_TUTO_OUT",
-  "E435":"KOKORO_CLEAR_TESTIMONY","E436":"KOKORO_SET_CAM","E437":"KOKORO_SHUTDOWN",
-  "E438":"KOKORO_SHOW","E439":"KOKORO_HIDE","E440":"EVENT_MOVE","E441":"EVENT_MOVE_WAIT",
-  "E442":"EVENT_SHOW_FADE","E443":"EVENT_END_FADE","E444":"EVENT_SHOW_BACK","E445":"MOVIE_PLAY",
-  "E446":"MOVIE_WAIT","E449":"MEMO_SET_TASK","E450":"MEMO_ALL_REMOVE",
-  "E451":"MEMO_TASK_FINISH","E452":"MEMO_SET_SUMMARY","E453":"EVENT_SHOW_FADE_BACK",
-  "E454":"EVENT_END_FADE_BACK","E455":"MEMO_SET_SUMMARY_P2",
-  "E456":"KOKORO_TUKITO_ADD_TESTIMONY_FLAG","E457":"BB_SMALL_MSG_WAIT","E458":"BB_SMALL_MSG",
-  "E459":"BB_BIG_MSG","E460":"COMBO_THUMB_ON","E461":"COMBO_THUMB_OFF",
-  "E462":"COMBO_GET_KEYWORD","E465":"COMBO_START","E466":"COMBO_START_RESUME",
-  "E467":"COMBO_END","E468":"COMBO_WAIT","E469":"COMBO_NEXT","E470":"COMBO_EVENT_SHOW",
-  "E471":"COMBO_EVENT_END","E474":"COMBO_KEYWORD_BACK","E476":"COMBO_WAIT_KEYWORD",
-  "E477":"COMBO_WAIT_EVENT","E478":"COMBO_WAIT_THUMB","E480":"COMBO_FAIL",
-  "E481":"COMBO_REBIRTH","E483":"COMBO_WAIT_LINE","E484":"COMBO_BG_SPEED",
-  "E485":"COMBO_END_RESUME","E486":"COMBO_STAR_LEVEL","E487":"COMBO_THUMB_ON_LINE",
-  "E488":"KOKORO_TUKITO_ADD_TESTIMONY_READ","E489":"MOVIE_PLAY_EX","E511":"COMBO_FAIL_IF",
-  "E512":"DTC_MOVE_FLAG_SET","E513":"MOVIE_PLAY_LIMIT","E514":"BGM_PREPARE_PAUSE",
-  "E515":"BGM_PREPARE_RESUME","E750":"PRE_SET_SCENE","E751":"PRE_SET_ITEM_ADD",
-  "E752":"PRE_SET_ITEM_REMOVE","E753":"PRE_SET_ITEM_REMOVE_ALL","E754":"PRE_SET_FLAG_ON",
-  "E755":"PRE_SET_FLAG_OFF","E756":"PRE_SET_ITEM_UPDATE","E761":"PRE_SET_DTC_TOPIC_ON",
-  "E762":"PRE_SET_DTC_MOVE_FLAG","E765":"PRE_SET_NOW_DATA_SET","E766":"PRE_SET_MEMO_SET_TASK",
-  "E767":"PRE_SET_MEMO_ALL_REMOVE","E768":"PRE_SET_MEMO_TASK_FINISH",
-  "E769":"PRE_SET_MEMO_SET_SUMMARY","E770":"PRE_SET_MEMO_SET_SUMMARY_P2","E800":"ROWE"
-};
-const SOJ_MAP={
-  "ICON PAD_Y":"ICN 21","ICON PAD_A":"ICN 22","ICON PAD_B":"ICN 23",
-  "E010":"c5","E039":"SCENE_JUMP_NEXT","E063":"WND_CLOSE","E067":"DEMO_UNK1",
-  "E096":"stse_mwn","E171":"GADGET_WAIT","E182":"MNK_DURUKU_FAILD_LABEL",
-  "E219":"INV_EVI_RET","E262":"HAMMER_PLAY_STOP_SOUND","E263":"NOT_GUILTY_CIVIL",
-  "E328":"INV_USE_LUMI","E347":"qa","E353":"skn0","E356":"QUAKE",
-  "E365":"DTC_MODE_NO_BTN_SELECT","E366":"DTC_MODE_NO_INV","E367":"INV_CAM_SET2",
-  "E368":"DTC_MODE_NO_MOVE","E463":"COMBO_LOAD","E464":"COMBO_OUT_PLAYER",
-  "E472":"COMBO_EVENT_THUMB_END","E473":"COMBO_SET_WAY","E475":"COMBO_REBIRTH_SE",
-  "E482":"COMBO_THUMB_CLR","E490":"DTC_TOPIC_FLAG_OFF","E491":"INV_CAM_SET_END",
-  "E492":"INV_POINT_RESET","E493":"INV_EVI_THRUST_START_TUTO","E494":"CHR_SET_MULTI",
-  "E495":"CHR_SET_MULTI_NOSTART","E496":"CHR_SET_SOUHEI","E516":"KS_ARC_LOAD",
-  "E517":"KS_ARC_RELEASE","E518":"KS_BGM","E519":"KS_SETUP_PHASE","E520":"KS_EXECUTE",
-  "E521":"KS_SET_BRANCH","E522":"MEMO_SET_SUMMARY_CIVIL","E523":"ANIME_PLAY",
-  "E524":"CAM_PLAY_DTC_BG_FADE_DISABLE","E526":"CAM_PLAY","E527":"CAM_SW",
-  "E528":"SPIRIT_SETUP","E529":"SPIRIT_EXECUTE","E530":"SPIRIT_SET_PHASE",
-  "E531":"SPIRIT_FINAL","E532":"SPIRIT_IS_DECIDE","E533":"SPIRIT_SENSE_CHECK",
-  "E535":"SPIRIT_REQ_AST_CHG","E536":"SPIRIT_REQ_AST_INS","E537":"SPIRIT_AST_CHG_EXE",
-  "E539":"ASSERTION_START","E541":"KS_SETUP_BERSERK_2ND","E543":"SPIRIT_ANSWER_JUMP",
-  "E545":"SPIRIT_START_DEMO","E547":"SPIRIT_DANCE_DEMO","E548":"SPIRIT_STATIC_IMAGE_IN",
-  "E549":"SPIRIT_STATIC_IMAGE_OUT","E550":"SPIRIT_TUTORIAL","E553":"CAM_ZOOM_IN_POS",
-  "E556":"FINGER_INIT","E557":"FINGER_START","E558":"FINGER_LABEL_SET",
-  "E559":"FINGER_SET_OFFSET","E560":"FINGER_TUTO","E561":"FINGER_COLLATE",
-  "E562":"POM_SETUP","E563":"POM_EXECUTE","E564":"POM_FINAL","E565":"POM_REG_ANSWER",
-  "E566":"POM_CLEAR_ANSWER","E567":"POM_B_CORRECT","E568":"POM_B_HIT_ID",
-  "E570":"BOX_SETUP","E571":"BOX_EXECUTE","E572":"BOX_FINAL","E573":"BOX_B_SUCCESS",
-  "E574":"BOX_B_FAILURE","E575":"BOX_OPEN","E576":"CAM_ZOOM_IN_OFFS",
-  "E579":"INV_EVI_THRUST_START","E580":"INV_EVI_MOT_PLAY","E581":"INV_EVI_COLLISION",
-  "E582":"INV_EVI_MOT_SET","E583":"FINGER_ARROW","E585":"DELTA_TIME_SET",
-  "E587":"SPIRIT_B_FAIL_TYPE","E588":"CHR_TAG_WAIT","E589":"SDL_EV_ID_WAIT",
-  "E590":"EFC_LINE_SET","E591":"EFC_LINE_END","E592":"SPIRIT_CHANGE_EXIT",
-  "E595":"NOT_GUILTY_ANIM","E598":"CAM_ZOOM_REVERSE","E599":"CAM_PLAY_LOOK_UP",
-  "E609":"BGM_PLAY_VOLUME","E611":"BGM_VOLUME_OF","E612":"STRM_PLAY","E613":"STRM_STOP",
-  "E614":"STRM_FADE_IN","E615":"STRM_FADE_OUT","E616":"STRM_WAIT_OF","E617":"STRM_WAIT",
-  "E619":"STRM_VOLUME_OF","E620":"STRM_PLAY_NC","E621":"STRM_FADE_OUT_OF",
-  "E638":"dog_se","E641":"SE_CAM_VOL_MIN_SET","E642":"SE_CAM_FO_FORCE",
-  "E646":"SE_FADE_OUT_WAIT","E661":"RELIC_DEMO_FINAL","E662":"SCE00_OP_DEMO",
-  "E663":"SCE00_OP_DEMO_WAIT","E664":"KS_TUTORIAL","E665":"KS_SET_THROUGH",
-  "E675":"RESET_LAYOUT_CAM","E676":"WALLPAPER_SET","E678":"PHOTO_FACE_SET",
-  "E771":"PRE_SET_PLAYER_SET","E772":"PRE_SET_SCENARIO_MODE",
-  "E773":"PRE_SET_MEMO_SET_SUMMARY_CIVIL","E795":"MSGS","E796":"MSGE"
-};
-const SOJ_OVR={
-  "E525":"CAM_WAIT","E600":"BGM_CONTEXT","E601":"BGM_WAIT","E602":"BGM_SWAP",
-  "E603":"BGM_FADE_OUT_OF","E604":"BGM_PLAY","E605":"BGM_STOP","E606":"BGM_FADE_IN",
-  "E607":"BGM_FADE_OUT","E608":"BGM_VOLUME","E610":"BGM_WAIT_OF","E630":"SE_PLAY",
-  "E631":"SE_STOP","E632":"SE_VOLUME","E633":"SE_WAIT","E634":"SE_FADE_IN",
-  "E635":"SE_FADE_OUT","E639":"SE_VOLUME_OF","E081":"bgm_mw","E082":"BOKEH_FILTER_ON",
-  "E083":"BOKEH_FILTER_OFF","E084":"BOKEH_FILTER_WAIT","E085":"stse_mw",
-  "E086":"WND_OPEN_QUICK","E087":"WND_CLOSE_QUICK","E088":"FADE_SCENE",
-  "E090":"FADE_KAISOU_START_IN","E091":"FADE_KAISOU_NOCAM_START","E093":"FADE_KAISOU_END_IN",
-  "E094":"FADE_KAISOU_NOCAM_END","E097":"FADE_KAISOU_EVENT_START",
-  "E098":"FADE_KAISOU_EVENT_END","E114":"INV_REGION_SET","E122":"BG_ORNAMENT_MTR_ANM",
-  "E127":"BOW","E129":"BG_ORNAMENT_ALPHA","E130":"SET_CAM_FAR",
-  "E142":"CHR_SET_AND_REMOVAL","E143":"CHR_WAIT_LINK","E148":"CHR_ANIME_NSS",
-  "E149":"CHR_SET_NOSTART","E150":"CHR_FORCE_MOUTH","E159":"CHR_LOOP_WAIT",
-  "E162":"CHR_LEAVE","E163":"CHR_ANIME_NO_SE","E193":"MARK","E194":"CHR_SET_VOFF",
-  "E259":"PO_ANSWER_SET","E261":"DEMO_DEL","E268":"INV_CAM_RET_FORCE",
-  "E515":"CAM_RETURN_DEFAULT"
-};
-
-function buildMapping(isSOJ){
-  return isSOJ ? Object.assign({},DD_MAP,SOJ_MAP,SOJ_OVR) : Object.assign({},DD_MAP,SOJ_MAP);
-}
-
-const NO_PREFIX=new Set(["CENTER","ICN","PAGE"]);
-const NO_COMMA=new Set(["ICN","ICN 0","ICN 2","ICN 4","ICN 5","ICN 6","ICN 7","ICN 8","ICN 9",
-  "ICN 10","ICN 11","ICN 12","ICN 13","ICN 14","ICN 15","ICN 16","ICN 19","ICN 20",
-  "ICN 21","ICN 22","ICN 23"]);
-const REMOVE_TAGS=["SEC_END"];
-
-function applyMapping(text, mapping){
-  for(const[k,v]of Object.entries(mapping)){
-    const re=new RegExp('<'+k.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'),'g');
-    text=text.replace(re,'<'+v);
-  }
-  return text;
-}
-function removeTags(text){
-  for(const t of REMOVE_TAGS) text=text.replace(new RegExp('<'+t+'[^>]*>','g'),'');
-  return text;
-}
-function addPrefixAndCommas(text){
-  // spaces→commas inside tags (except NO_COMMA tags)
-  text=text.replace(/<([^>]+)>/g,(m,inner)=>{
-    for(const nc of NO_COMMA) if(inner===nc||inner.startsWith(nc+' ')) return m;
-    return '<'+inner.replace(/ /g,',')+'>'; 
-  });
-  // add E prefix to opcodes (tags not in NO_PREFIX and not already prefixed)
-  text=text.replace(/<([A-Z_][^,>]*)([,>])/g,(m,tag,sep)=>{
-    if(NO_PREFIX.has(tag.split(',')[0])) return m;
-    if(tag.startsWith('E ')) return m;
-    return '<E '+tag+sep;
-  });
-  return text;
-}
-
-// ── BUILD GMD (user.2 labels → GMD binary) ──────────────────────────────────
-function buildGmd(labels, gmdName, language, version, isSOJ){
-  const enc=new TextEncoder();
-  const mapping=buildMapping(isSOJ);
-  const labelNames=[], parts=[];
-
-  for(const[lab,txt]of labels){
-    labelNames.push(lab);
-    let t=txt;
-    t=applyMapping(t,mapping);
-    t=removeTags(t);
-    t=addPrefixAndCommas(t);
-    parts.push(t);
+  const ov7Count = ov7Size / 32;
+  for (let i = 0; i < ov7Count; i++) {
+    const base = ov7Offset + i * 32;
+    if (base + 32 > buf.byteLength) break;
+    const fileId = readU32LE(buf, base + 4);
+    if (fatOffset + (fileId+1)*8 > buf.byteLength) continue;
+    const start = readU32LE(buf, fatOffset + fileId * 8);
+    const end   = readU32LE(buf, fatOffset + fileId * 8 + 4);
+    const sz    = end - start;
+    if (start === 0 || sz <= 0 || start + sz > buf.byteLength) continue;
+    files.push({ id: 'ov7_' + i, name: `overlay7_${String(i).padStart(4,'0')}.bin`, path: 'overlays/arm7/', ext: 'overlay', offset: start, size: sz, category: 'arm' });
   }
 
-  // build content bytes: each text + \0, \n→\r\n
-  let content=new Uint8Array(0);
-  for(const t of parts){
-    const b=enc.encode((t+'\x00').replace(/\n/g,'\r\n'));
-    const m=new Uint8Array(content.length+b.length);
-    m.set(content);m.set(b,content.length);content=m;
-  }
+  // ── FAT (File Allocation Table) ──
+  const fileCount = fatSize / 8;
+  $('i-count').textContent = fileCount + ' (FAT entries)';
 
-  const lc=labelNames.length, sc=lc;
-  const li=LANG_TO[language]??1;
-  const vi=VER_TO[version];
-  const doXor=(version===1);
-  const lstr=labelNames.join('\x00')+'\x00';
-  const lsz=lc<1?0:rfull(lstr).length;
+  // ── FNT (File Name Table) ──
+  // Build directory tree
+  const dirs = {};
+  const rootOffset = fntOffset;
 
-  const w=new W();
-  w.w([71,77,68,0]); // GMD\0
-  w.u32(vi);w.u32(li);w.u32(0);w.u32(0);
-  w.u32(lc);w.u32(sc);w.u32(lsz);w.u32(content.length);w.u32(gmdName.length);
-  w.str(gmdName);w.u8(0);
+  function parseFNT() {
+    // Root directory: entry at fntOffset, root start file id = U16 at fntOffset+6
+    const rootEntryOff = fntOffset;
+    const rootSubTable = readU32LE(buf, rootEntryOff);
+    const rootFirstFile = readU16LE(buf, rootEntryOff + 4);
+    const dirCount = readU16LE(buf, rootEntryOff + 6);
 
-  if(version===1){
-    let off=0;
-    for(let i=0;i<lc;i++){w.u32(i);w.u32(off);off+=rfull(labelNames[i]).length+1;}
-  } else {
-    let off=0;
-    for(let i=0;i<lc;i++){
-      const[h1,h2]=calcHash(labelNames[i]);
-      w.u32(h1);w.u32(h2);w.u32(off);
-      w.u32(0);w.u32(0);
-      off+=rfull(labelNames[i]).length+1;
+    function readDir(dirIdx, parentPath) {
+      const entOff = fntOffset + dirIdx * 8;
+      if (entOff + 8 > buf.byteLength) return;
+      const subTableOff = fntOffset + readU32LE(buf, entOff);
+      const firstFileId  = readU16LE(buf, entOff + 4);
+
+      let pos = subTableOff;
+      let fileIdx = firstFileId;
+
+      while (pos < fntOffset + fntSize && pos < buf.byteLength) {
+        const lenType = new Uint8Array(buf, pos, 1)[0];
+        pos++;
+        if (lenType === 0x00) break; // end of subtable
+        const nameLen = lenType & 0x7F;
+        const isDir   = (lenType & 0x80) !== 0;
+        if (pos + nameLen > buf.byteLength) break;
+        const nameBytes = new Uint8Array(buf, pos, nameLen);
+        const name = String.fromCharCode(...nameBytes);
+        pos += nameLen;
+
+        if (isDir) {
+          const subDirId = readU16LE(buf, pos) - 0xF000;
+          pos += 2;
+          const subPath = parentPath ? parentPath + '/' + name : name;
+          dirs[subDirId] = subPath;
+          readDir(subDirId, subPath);
+        } else {
+          // It's a file — look up in FAT
+          const fatOff = fatOffset + fileIdx * 8;
+          if (fatOff + 8 <= buf.byteLength) {
+            const start = readU32LE(buf, fatOff);
+            const end   = readU32LE(buf, fatOff + 4);
+            const sz    = end - start;
+            if (sz > 0 && start + sz <= buf.byteLength) {
+              const ext = guessExt(buf, start, sz);
+              const finalName = name.includes('.') ? name : name + '.' + ext;
+              const filePath = parentPath ? parentPath + '/' : '';
+              files.push({
+                id: fileIdx,
+                name: finalName,
+                path: filePath,
+                ext: ext,
+                offset: start,
+                size: sz,
+                category: typeCategory(ext)
+              });
+            }
+          }
+          fileIdx++;
+        }
+      }
     }
-    w.w(new Uint8Array(1024)); // empty hash table
+
+    dirs[0] = '';
+    readDir(0, '');
   }
 
-  for(const n of labelNames){w.str(n);w.u8(0);}
-  w.w(doXor?xor(content,1):content);
-  return w.out();
-}
+  try { parseFNT(); } catch(e) { console.warn('FNT parse error:', e); }
 
-// ── PREVIEW ──────────────────────────────────────────────────────────────────
-let decPrev=null, togmdPrev=null;
-
-function renderList(listId, statsId, labels, q){
-  const list=document.getElementById(listId), stats=document.getElementById(statsId);
-  if(!list)return;
-  const fl=q?labels.filter(([n,t])=>n.toLowerCase().includes(q)||t.toLowerCase().includes(q)):labels;
-  if(stats)stats.textContent=q?`${fl.length} of ${labels.length} labels`:`${labels.length} labels`;
-  list.innerHTML=fl.map(([n,t],i)=>{
-    const has=t.trim().length>0;
-    return`<div class="label-item"><div class="label-hdr" onclick="toggleLabel(this)">
-      <span class="label-idx">#${i}</span>
-      <span class="label-name">${esc(n)}</span>
-      <span class="label-caret" style="${has?'':'opacity:.3'}">&#9658;</span>
-    </div>${has?`<div class="label-body">${esc(t)}</div>`:''}</div>`;
-  }).join('');
-}
-function initPrev(lid, rid, data, raw){
-  const le=document.getElementById(lid), re=document.getElementById(rid);
-  if(!data.labels.length){le.innerHTML='<div class="empty-note">No labels.</div>';return;}
-  le.innerHTML=`<div class="search-bar"><input type="text" placeholder="Filter labels…" oninput="filterLabels('${lid}',this.value)"></div>
-    <div class="preview-stats" id="${lid}-stats">${data.labels.length} labels</div>
-    <div class="label-list" id="${lid}-list"></div>`;
-  renderList(lid+'-list',lid+'-stats',data.labels,'');
-  if(re)re.innerHTML=`<div class="raw-view">${esc(raw)}</div>`;
-}
-function filterLabels(cid,q){
-  const d=cid.startsWith('dec')?decPrev:togmdPrev;
-  if(d)renderList(cid+'-list',cid+'-stats',d.labels,q.toLowerCase());
-}
-function toggleLabel(h){
-  const b=h.nextElementSibling;if(!b)return;
-  const c=h.querySelector('.label-caret');
-  const o=b.classList.toggle('open');if(c)c.classList.toggle('open',o);
-}
-function switchDecPreview(n){
-  document.querySelectorAll('#dec-out-card .preview-tab').forEach((b,i)=>b.classList.toggle('active',['labels','raw'][i]===n));
-  document.getElementById('dec-prev-labels').style.display=n==='labels'?'':'none';
-  document.getElementById('dec-prev-raw').style.display=n==='raw'?'':'none';
-}
-function switchTogmdPreview(n){
-  document.querySelectorAll('#togmd-out-card .preview-tab').forEach((b,i)=>b.classList.toggle('active',['labels','raw'][i]===n));
-  document.getElementById('togmd-prev-labels').style.display=n==='labels'?'':'none';
-  document.getElementById('togmd-prev-raw').style.display=n==='raw'?'':'none';
-}
-
-// ── STATE ────────────────────────────────────────────────────────────────────
-let decBuf=null,decName='';
-let encTxt=null,encOut=null;
-let togmdBuf=null,togmdFName='',togmdOut=null,togmdOutName='';
-let togmdVer=1,togmdGame='dd';
-
-// ── DECODE TAB ───────────────────────────────────────────────────────────────
-setupDrop('drop-decode','dec-file-input',async f=>{
-  decName=f.name;document.getElementById('dec-drop-text').textContent=f.name;
-  document.getElementById('dec-out-card').style.display='none';
-  document.getElementById('dec-status').style.display='none';
-  decBuf=await readAB(f);
-  try{
-    const d=decodeU2(decBuf);
-    setMeta('dec-meta',[['Labels',''+d.labels.length],['Name',d.name||'—'],['Size',fmtB(f.size)]]);
-    setStatus('dec-status',`Loaded · ${d.labels.length} labels · ${fmtB(f.size)}`,'ok');
-  }catch(e){
-    setMeta('dec-meta',[['File',f.name],['Size',fmtB(f.size)],['Labels','?']]);
-    setStatus('dec-status','Loaded (preview failed: '+e.message+')','warn');
+  // Fallback: if FNT gave us too few, enumerate FAT directly
+  const namedIds = new Set(files.filter(f=>typeof f.id==='number').map(f=>f.id));
+  let fallbackAdded = 0;
+  for (let i = 0; i < fileCount && fallbackAdded < 5000; i++) {
+    if (namedIds.has(i)) continue;
+    const fatOff = fatOffset + i * 8;
+    if (fatOff + 8 > buf.byteLength) break;
+    const start = readU32LE(buf, fatOff);
+    const end   = readU32LE(buf, fatOff + 4);
+    const sz    = end - start;
+    if (sz <= 0 || sz > 0x2000000 || start + sz > buf.byteLength || start < 0x8000) continue;
+    const ext = guessExt(buf, start, sz);
+    files.push({
+      id: i,
+      name: `file_${String(i).padStart(4,'0')}.${ext}`,
+      path: 'unnamed/',
+      ext: ext,
+      offset: start,
+      size: sz,
+      category: typeCategory(ext)
+    });
+    namedIds.add(i);
+    fallbackAdded++;
   }
-  document.getElementById('btn-decode').disabled=false;
-});
-async function runDecode(){
-  if(!decBuf){setStatus('dec-status','No file loaded','err');return;}
-  setStatus('dec-status','Decoding…','');
-  try{
-    const data=decodeU2(decBuf);
-    const json=JSON.stringify(data,null,2)+'\n';
-    document.getElementById('dec-preview').value=json;
-    document.getElementById('dec-dl-meta').textContent=base(decName)+'.json · '+fmtB(new Blob([json]).size);
-    document.getElementById('dec-out-card').style.display='';
-    decPrev=data;initPrev('dec-prev-labels','dec-prev-raw',data,json);
-    setStatus('dec-status',`Decoded · ${data.labels.length} labels`,'ok');
-  }catch(e){setStatus('dec-status','Error: '+e.message,'err');console.error(e);}
-}
-function dlDecoded(){
-  dlBlob(new Blob([document.getElementById('dec-preview').value],{type:'application/json'}),base(decName)+'.json');
+
+  return files;
 }
 
-// ── ENCODE TAB ───────────────────────────────────────────────────────────────
-setupDrop('drop-encode','enc-file-input',async f=>{
-  document.getElementById('enc-drop-text').textContent=f.name;
-  document.getElementById('enc-out-card').style.display='none';
-  document.getElementById('enc-status').style.display='none';
-  encTxt=await readTxt(f);
-  try{
-    const d=JSON.parse(encTxt);
-    if(typeof d.name!=='string'||!Array.isArray(d.labels))throw new Error('Invalid structure');
-    setStatus('enc-status',`Loaded · ${d.labels.length} labels · ${fmtB(f.size)}`,'ok');
-  }catch(e){setStatus('enc-status','Loaded (JSON parse failed: '+e.message+')','warn');}
-  document.getElementById('btn-encode').disabled=false;
-});
-async function runEncode(){
-  if(!encTxt){setStatus('enc-status','No file loaded','err');return;}
-  setStatus('enc-status','Encoding…','');
-  try{
-    const data=JSON.parse(encTxt);
-    if(typeof data.name!=='string'||!Array.isArray(data.labels))
-      throw new Error('JSON must have { "name": string, "labels": [[label,text],...] }');
-    for(const l of data.labels)
-      if(!Array.isArray(l)||l.length!==2||typeof l[0]!=='string'||typeof l[1]!=='string')
-        throw new Error('Each entry must be a [string,string] pair');
-    encOut=encodeU2(data);
-    const n=document.getElementById('enc-out-name').value||'user.2.en';
-    document.getElementById('enc-dl-meta').textContent=n+' · '+fmtB(encOut.length);
-    document.getElementById('enc-out-card').style.display='';
-    setStatus('enc-status',`Encoded · ${data.labels.length} labels → ${n}`,'ok');
-  }catch(e){setStatus('enc-status','Error: '+e.message,'err');console.error(e);}
-}
-function dlEncoded(){
-  if(!encOut)return;
-  dlBlob(new Blob([encOut],{type:'application/octet-stream'}),document.getElementById('enc-out-name').value||'user.2.en');
+/* ── NARC PARSER ── */
+function parseNARC(buf, offset, size) {
+  const bytes = new Uint8Array(buf, offset, size);
+  const sub = bytes.buffer.slice ? bytes.buffer.slice(offset, offset+size) : buf.slice(offset, offset+size);
+  const view = new DataView(sub);
+  const inner = [];
+
+  try {
+    // NARC magic: 4E 41 52 43
+    if (view.getUint8(0)!==0x4E||view.getUint8(1)!==0x41||view.getUint8(2)!==0x52||view.getUint8(3)!==0x43) return inner;
+    const numBlocks = view.getUint16(0x0E, true);
+    // BTAF block at offset 0x10
+    if (view.getUint8(0x10)!==0x42||view.getUint8(0x11)!==0x54||view.getUint8(0x12)!==0x41||view.getUint8(0x13)!==0x46) return inner;
+    const btafSize = view.getUint32(0x14, true);
+    const numFiles = view.getUint16(0x18, true);
+    // FAT entries start at 0x1C
+    const fatStart = 0x1C;
+    // GMIF block
+    const gmifOff = 0x10 + btafSize;
+    // Optionally BTNF block
+    let dataOff = gmifOff;
+    if (view.getUint8(gmifOff)===0x42&&view.getUint8(gmifOff+1)===0x54&&view.getUint8(gmifOff+2)===0x4E&&view.getUint8(gmifOff+3)===0x46) {
+      const btnfSize = view.getUint32(gmifOff+4, true);
+      dataOff = gmifOff + btnfSize;
+    }
+    // GMIF offset
+    let gmifDataOff = dataOff;
+    if (view.getUint8(dataOff)===0x47&&view.getUint8(dataOff+1)===0x4D&&view.getUint8(dataOff+2)===0x49&&view.getUint8(dataOff+3)===0x46) {
+      gmifDataOff = dataOff + 8;
+    }
+    for (let i = 0; i < numFiles && i < 2000; i++) {
+      const eOff = fatStart + i * 8;
+      if (eOff + 8 > btafSize + 0x10) break;
+      const start = view.getUint32(eOff, true);
+      const end   = view.getUint32(eOff + 4, true);
+      const sz    = end - start;
+      const absOff = gmifDataOff + start;
+      if (sz <= 0 || absOff + sz > size) continue;
+      const ext = guessExt(sub, absOff, sz);
+      inner.push({ id: i, name: `${String(i).padStart(4,'0')}.${ext}`, offset: absOff, size: sz, ext });
+    }
+  } catch(e) {}
+  return inner;
 }
 
-// ── USER.2 → GMD TAB ─────────────────────────────────────────────────────────
-function setTogmdVer(v){
-  togmdVer=v;
-  document.getElementById('togmd-v1-btn').classList.toggle('active',v===1);
-  document.getElementById('togmd-v2-btn').classList.toggle('active',v===2);
-  document.getElementById('togmd-xor-note').textContent=v===1
-    ?'V1 (GS5 / Dual Destinies) — XOR encryption will be applied.'
-    :'V2 (GS6 / Spirit of Justice) — no XOR encryption applied.';
-}
-function setTogmdGame(g){
-  togmdGame=g;
-  document.getElementById('togmd-dd-btn').classList.toggle('active',g==='dd');
-  document.getElementById('togmd-soj-btn').classList.toggle('active',g==='soj');
-}
-setupDrop('drop-togmd','togmd-file-input',async f=>{
-  togmdFName=f.name;document.getElementById('togmd-drop-text').textContent=f.name;
-  document.getElementById('togmd-out-card').style.display='none';
-  document.getElementById('togmd-status').style.display='none';
-  togmdBuf=await readAB(f);
-  const b=base(f.name);
-  if(!document.getElementById('togmd-gmd-name').value)
-    document.getElementById('togmd-gmd-name').value=b;
-  try{
-    const d=decodeU2(togmdBuf);
-    setMeta('togmd-meta',[['Labels',''+d.labels.length],['Name',d.name||'—'],['Size',fmtB(f.size)]]);
-    setStatus('togmd-status',`Loaded · ${d.labels.length} labels · ${fmtB(f.size)}`,'ok');
-  }catch(e){
-    setMeta('togmd-meta',[['File',f.name],['Size',fmtB(f.size)],['Labels','?']]);
-    setStatus('togmd-status','Loaded (parse failed: '+e.message+')','warn');
+/* ── UI ── */
+function renderFiles() {
+  const search = $('search-input').value.toLowerCase();
+  let list = allFiles.filter(f => {
+    if (activeType !== 'all' && f.category !== activeType) return false;
+    if (search && !f.name.toLowerCase().includes(search) && !f.path.toLowerCase().includes(search)) return false;
+    return true;
+  });
+
+  // Sort
+  if (sortMode === 'name') list.sort((a,b)=>a.name.localeCompare(b.name));
+  else if (sortMode === 'size-desc') list.sort((a,b)=>b.size-a.size);
+  else if (sortMode === 'size-asc') list.sort((a,b)=>a.size-b.size);
+  else if (sortMode === 'type') list.sort((a,b)=>a.ext.localeCompare(b.ext));
+  else list.sort((a,b)=>{
+    const ai = typeof a.id==='number'?a.id:999999;
+    const bi = typeof b.id==='number'?b.id:999999;
+    return ai-bi;
+  });
+
+  filteredFiles = list;
+  $('panel-title').textContent = `${list.length} files`;
+
+  const tbody = $('file-tbody');
+  tbody.innerHTML = '';
+
+  if (list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="5"><div class="empty-state">No files match the current filter.</div></td></tr>';
+    return;
   }
-  document.getElementById('btn-togmd').disabled=false;
+
+  const frag = document.createDocumentFragment();
+  list.forEach(f => {
+    const tr = document.createElement('tr');
+    tr.dataset.id = f.id;
+    const cls = typeClass(f.ext);
+    const isNARC = f.ext === 'narc';
+    tr.innerHTML = `
+      <td class="td-check"><input type="checkbox" class="file-check" checked/></td>
+      <td>
+        <div class="file-name">${f.name}${isNARC?` <span style="font-size:10px;color:var(--accent);cursor:pointer" onclick="openNARC(${f.id})">[peek]</span>`:''}</div>
+        <div class="file-path">${f.path||'/'}</div>
+      </td>
+      <td><span class="type-badge ${cls}">.${f.ext}</span></td>
+      <td class="size-cell">${fmtSize(f.size)}</td>
+      <td class="id-cell">${typeof f.id==='number'?('0x'+f.id.toString(16).toUpperCase()):f.id}</td>
+    `;
+    frag.appendChild(tr);
+  });
+  tbody.appendChild(frag);
+
+  updateStats();
+}
+
+function updateStats() {
+  const counts = { arm:0, binary:0, graphics:0, audio:0, archive:0 };
+  allFiles.forEach(f => {
+    const c = f.category;
+    if (c in counts) counts[c]++;
+    else counts.binary++;
+  });
+  $('cnt-bin').textContent = counts.binary;
+  $('cnt-img').textContent = counts.graphics;
+  $('cnt-snd').textContent = counts.audio;
+  $('cnt-arc').textContent = counts.archive;
+  $('cnt-arm').textContent = counts.arm;
+  const total = allFiles.length;
+  const main_cats = counts.binary + counts.graphics + counts.audio + counts.archive + counts.arm;
+  $('cnt-other').textContent = Math.max(0, total - main_cats);
+}
+
+/* ── NARC PEEK ── */
+function openNARC(fileId) {
+  const file = allFiles.find(f=>f.id===fileId);
+  if (!file) return;
+  const entries = parseNARC(romBuffer, file.offset, file.size);
+  $('modal-title').textContent = file.name + ' — ' + entries.length + ' entries';
+  const nc = $('narc-content');
+  if (entries.length === 0) {
+    nc.innerHTML = '<p style="color:var(--muted);font-size:12px">Could not parse NARC contents.</p>';
+  } else {
+    nc.innerHTML = '<div class="narc-file-list">' +
+      entries.map(e => `<div class="narc-file-item">
+        <span>${e.name}</span>
+        <span class="type-badge ${typeClass(e.ext)}">.${e.ext} &nbsp; ${fmtSize(e.size)}</span>
+      </div>`).join('') +
+    '</div>';
+  }
+  $('narc-modal').classList.add('open');
+}
+window.openNARC = openNARC;
+
+/* ── EXTRACT ── */
+async function extractFiles(list) {
+  if (list.length === 0) return alert('No files selected.');
+  $('progress-section').style.display = 'block';
+  $('prog-fill').style.width = '0%';
+  $('prog-title').textContent = 'Building ZIP…';
+
+  const zip = new JSZip();
+  const seenPaths = {};
+
+  for (let i = 0; i < list.length; i++) {
+    const f = list[i];
+    $('prog-fill').style.width = ((i/list.length)*100).toFixed(1) + '%';
+    $('prog-label').textContent = `${i} / ${list.length} — ${f.name}`;
+
+    let outPath = (f.path || '') + f.name;
+    // Deduplicate
+    if (seenPaths[outPath]) {
+      const parts = f.name.split('.');
+      const ext = parts.length > 1 ? '.' + parts.pop() : '';
+      outPath = (f.path||'') + parts.join('.') + '_' + i + ext;
+    }
+    seenPaths[outPath] = true;
+
+    // If NARC, also unpack contents into sub-folder
+    const data = new Uint8Array(romBuffer, f.offset, f.size);
+    zip.file(outPath, data);
+
+    if (f.ext === 'narc') {
+      const narcEntries = parseNARC(romBuffer, f.offset, f.size);
+      const subDir = (f.path||'') + f.name.replace('.narc','') + '/';
+      narcEntries.forEach(ne => {
+        const neData = new Uint8Array(romBuffer, f.offset + ne.offset, ne.size);
+        zip.file(subDir + ne.name, neData);
+      });
+    }
+
+    // Yield to browser
+    if (i % 50 === 0) await new Promise(r => setTimeout(r, 0));
+  }
+
+  $('prog-title').textContent = 'Compressing…';
+  $('prog-fill').style.width = '95%';
+  const blob = await zip.generateAsync({ type: 'blob', compression: 'DEFLATE', compressionOptions: { level: 1 } });
+  $('prog-fill').style.width = '100%';
+  $('prog-title').textContent = 'Done! ' + list.length + ' files extracted.';
+  $('prog-label').textContent = 'Download starting…';
+
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = 'AAI1_extracted.zip';
+  a.click();
+  setTimeout(() => URL.revokeObjectURL(url), 5000);
+}
+
+/* ── EVENT WIRING ── */
+function onROMLoaded(buf) {
+  romBuffer = buf;
+  allFiles = parseNDS(buf);
+
+  $('rominfo').style.display = 'block';
+  $('statsbar').style.display = 'block';
+  $('filterbar').style.display = 'flex';
+  $('filepanel').style.display = 'block';
+  updateStats();
+  renderFiles();
+}
+
+// File input
+$('file-input').addEventListener('change', e => {
+  const f = e.target.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = ev => onROMLoaded(ev.target.result);
+  reader.readAsArrayBuffer(f);
 });
-async function runToGmd(){
-  if(!togmdBuf){setStatus('togmd-status','No file loaded','err');return;}
-  setStatus('togmd-status','Stage 1/2: Decoding user.2…','');
-  try{
-    const data=decodeU2(togmdBuf);
-    const gmdName=document.getElementById('togmd-gmd-name').value.trim()||base(togmdFName);
-    const lang=document.getElementById('togmd-lang').value;
-    const isSOJ=togmdGame==='soj';
-    setStatus('togmd-status','Stage 2/2: Building GMD…','');
-    togmdOut=buildGmd(data.labels,gmdName,lang,togmdVer,isSOJ);
-    togmdOutName=gmdName+'.gmd';
-    const xn=togmdVer===1?' · XOR encrypted':'';
-    document.getElementById('togmd-dl-meta').textContent=togmdOutName+' · GMD V'+togmdVer+' · '+fmtB(togmdOut.length)+xn;
-    document.getElementById('togmd-out-card').style.display='';
-    togmdPrev=data;
-    initPrev('togmd-prev-labels','togmd-prev-raw',data,data.labels.map(([l,t],i)=>`[${i}] ${l}\n${t}`).join('\n\n'));
-    setStatus('togmd-status',`Done · ${data.labels.length} labels · GMD V${togmdVer} · ${togmdOutName}`,'ok');
-  }catch(e){setStatus('togmd-status','Error: '+e.message,'err');console.error(e);}
-}
-function dlTogmd(){
-  if(!togmdOut)return;
-  dlBlob(new Blob([togmdOut],{type:'application/octet-stream'}),togmdOutName||'output.gmd');
-}
+
+// Drag & drop
+const dz = $('dropzone');
+dz.addEventListener('dragover', e => { e.preventDefault(); dz.classList.add('drag-over'); });
+dz.addEventListener('dragleave', () => dz.classList.remove('drag-over'));
+dz.addEventListener('drop', e => {
+  e.preventDefault(); dz.classList.remove('drag-over');
+  const f = e.dataTransfer.files[0];
+  if (!f) return;
+  const reader = new FileReader();
+  reader.onload = ev => onROMLoaded(ev.target.result);
+  reader.readAsArrayBuffer(f);
+});
+
+// Filter buttons
+document.querySelectorAll('.type-btn').forEach(btn => {
+  btn.addEventListener('click', () => {
+    document.querySelectorAll('.type-btn').forEach(b => b.classList.remove('active'));
+    btn.classList.add('active');
+    activeType = btn.dataset.type;
+    renderFiles();
+  });
+});
+
+// Search
+$('search-input').addEventListener('input', renderFiles);
+$('sort-select').addEventListener('change', e => { sortMode = e.target.value; renderFiles(); });
+
+// Select all / none
+$('select-all-btn').addEventListener('click', () => {
+  document.querySelectorAll('.file-check').forEach(c => c.checked = true);
+  $('master-check').checked = true;
+});
+$('select-none-btn').addEventListener('click', () => {
+  document.querySelectorAll('.file-check').forEach(c => c.checked = false);
+  $('master-check').checked = false;
+});
+$('master-check').addEventListener('change', e => {
+  document.querySelectorAll('.file-check').forEach(c => c.checked = e.target.checked);
+});
+
+// Extract selected
+$('extract-btn').addEventListener('click', () => {
+  const rows = document.querySelectorAll('#file-tbody tr');
+  const selected = [];
+  rows.forEach((tr, i) => {
+    const chk = tr.querySelector('.file-check');
+    if (chk && chk.checked && filteredFiles[i]) selected.push(filteredFiles[i]);
+  });
+  extractFiles(selected);
+});
+
+// Extract all
+$('extract-all-btn').addEventListener('click', () => extractFiles(allFiles));
+
+// NARC modal close
+$('modal-close').addEventListener('click', () => $('narc-modal').classList.remove('open'));
+$('narc-modal').addEventListener('click', e => { if (e.target === $('narc-modal')) $('narc-modal').classList.remove('open'); });
 </script>
 </body>
 </html>
