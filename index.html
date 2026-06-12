@@ -379,8 +379,8 @@ function detectUsr2(u8){
   r.seek(4);
   for(let i=0;i<3;i++){if(r.u32()!==0)return{ok:false,error:'Unexpected resource/userdata/info count'};}
   for(let i=0;i<3;i++){if(r.u64()!==USRHDR_SIZE)return{ok:false,error:'Unexpected USR header offset'};}
-  // padded to 16 already (48 is multiple of 16)
-  if(r.tell()!==USRHDR_SIZE)return{ok:false,error:'Header size mismatch'};
+  r.u64(); // skip 8-byte padding field at offsets 40-47
+if(r.tell()!==USRHDR_SIZE)return{ok:false,error:'Header size mismatch'};
   if(!bytesEq(u8.slice(r.tell()),'RSZ\0'))return{ok:false,error:'Bad RSZ magic'};
   r.seek(r.tell()+4);
   if(r.u32()!==16)return{ok:false,error:'Unexpected RSZ version'};
