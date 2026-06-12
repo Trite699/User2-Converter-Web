@@ -1,831 +1,1131 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>cpac2d.bin Extractor</title>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>User2 Script Converter</title>
 <style>
-  :root {
-    --bg: #0d0f14;
-    --surface: #161920;
-    --surface2: #1e2230;
-    --border: #2a2f3d;
-    --accent: #ff6b35;
-    --accent2: #ff9a6c;
-    --text: #e8eaf0;
-    --muted: #7a8099;
-    --success: #4ecdc4;
-    --danger: #ff4757;
-    --card-bg: #12151e;
+*{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg-primary:#fff;--bg-secondary:#f5f5f5;--bg-success:#e6f9ee;--bg-danger:#fdecea;--bg-warn:#fff8e1;
+  --text-primary:#111;--text-secondary:#666;--text-tertiary:#aaa;
+  --text-success:#1a7a3f;--text-danger:#b71c1c;--text-warn:#7a5800;
+  --border-t:rgba(0,0,0,0.12);--border-s:rgba(0,0,0,0.2);--border-p:rgba(0,0,0,0.35);
+  --r-md:8px;--r-lg:12px;
+}
+@media(prefers-color-scheme:dark){
+  :root{
+    --bg-primary:#1e1e1e;--bg-secondary:#2a2a2a;--bg-success:#0d3320;--bg-danger:#3b1010;--bg-warn:#2a2000;
+    --text-primary:#f0f0f0;--text-secondary:#aaa;--text-tertiary:#666;
+    --text-success:#4caf82;--text-danger:#f08080;--text-warn:#e6c040;
+    --border-t:rgba(255,255,255,0.1);--border-s:rgba(255,255,255,0.2);--border-p:rgba(255,255,255,0.35);
   }
-  * { box-sizing: border-box; margin: 0; padding: 0; }
-  body {
-    background: var(--bg);
-    color: var(--text);
-    font-family: 'Courier New', monospace;
-    min-height: 100vh;
-  }
-  .scanline {
-    position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-    pointer-events: none; z-index: 0;
-    background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.08) 2px, rgba(0,0,0,0.08) 4px);
-  }
-  .container { max-width: 960px; margin: 0 auto; padding: 2rem 1.5rem; position: relative; z-index: 1; }
-  header { text-align: center; margin-bottom: 3rem; }
-  .logo {
-    font-size: 2.8rem; font-weight: 900; letter-spacing: -1px;
-    color: var(--accent);
-    text-shadow: 0 0 40px rgba(255,107,53,0.3);
-    font-family: 'Courier New', monospace;
-  }
-  .logo span { color: var(--text); }
-  .subtitle {
-    font-size: 0.78rem; letter-spacing: 0.25em; color: var(--muted);
-    text-transform: uppercase; margin-top: 0.5rem;
-  }
-  .badge {
-    display: inline-block; background: var(--surface2); border: 1px solid var(--border);
-    font-size: 0.7rem; padding: 2px 10px; border-radius: 2px; color: var(--accent);
-    letter-spacing: 0.1em; margin-top: 0.75rem;
-  }
+}
+body{font-family:-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif;color:var(--text-primary);background:var(--bg-secondary);min-height:100vh;}
+.wrap{max-width:680px;margin:0 auto;padding:2rem 1rem 4rem;}
+h1{font-size:22px;font-weight:500;margin-bottom:4px;}
+.sub{font-size:13px;color:var(--text-secondary);margin-bottom:20px;}
 
-  .drop-zone {
-    border: 2px dashed var(--border);
-    border-radius: 8px;
-    padding: 4rem 2rem;
-    text-align: center;
-    cursor: pointer;
-    transition: all 0.2s;
-    background: var(--card-bg);
-    position: relative;
-    overflow: hidden;
-  }
-  .drop-zone::before {
-    content: '';
-    position: absolute; top: 0; left: -100%;
-    width: 60%; height: 100%;
-    background: linear-gradient(90deg, transparent, rgba(255,107,53,0.04), transparent);
-    animation: sweep 3s ease-in-out infinite;
-  }
-  @keyframes sweep { 0%{left:-60%} 100%{left:120%} }
-  .drop-zone:hover, .drop-zone.over {
-    border-color: var(--accent);
-    background: rgba(255,107,53,0.04);
-  }
-  .drop-icon {
-    font-size: 3.5rem; display: block; margin-bottom: 1rem;
-    color: var(--accent); filter: drop-shadow(0 0 12px rgba(255,107,53,0.4));
-  }
-  .drop-title { font-size: 1.1rem; color: var(--text); margin-bottom: 0.5rem; }
-  .drop-sub { font-size: 0.8rem; color: var(--muted); }
-  input[type=file] { display: none; }
+.card{background:var(--bg-primary);border:0.5px solid var(--border-t);border-radius:var(--r-lg);padding:1rem 1.25rem;margin-bottom:12px;}
+.card-title{font-size:11px;font-weight:500;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.06em;margin-bottom:10px;display:flex;align-items:center;justify-content:space-between;gap:8px;}
+.card-title-right{font-size:11px;font-weight:400;color:var(--text-tertiary);text-transform:none;letter-spacing:0;flex-shrink:0;}
 
-  .stats-bar {
-    display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px;
-    background: var(--border); border: 1px solid var(--border);
-    border-radius: 6px; overflow: hidden; margin: 1.5rem 0;
-  }
-  .stat {
-    background: var(--surface); padding: 0.75rem 1rem;
-    text-align: center;
-  }
-  .stat-val { font-size: 1.4rem; color: var(--accent); font-weight: 900; }
-  .stat-label { font-size: 0.65rem; color: var(--muted); text-transform: uppercase; letter-spacing: 0.15em; }
+.drop{display:flex;flex-direction:column;align-items:center;gap:6px;border:1.5px dashed var(--border-s);border-radius:var(--r-md);padding:1.25rem 1rem;text-align:center;cursor:pointer;transition:border-color .15s;position:relative;}
+.drop:hover,.drop.dragover{border-color:var(--border-p);}
+.drop input[type=file]{position:absolute;inset:0;opacity:0;cursor:pointer;width:100%;height:100%;}
+.drop-icon{width:30px;height:30px;border-radius:50%;background:var(--bg-secondary);display:flex;align-items:center;justify-content:center;}
+.drop-icon svg{width:14px;height:14px;stroke:var(--text-secondary);fill:none;stroke-width:2;stroke-linecap:round;stroke-linejoin:round;}
+.drop-label{font-size:13px;color:var(--text-secondary);}
+.drop-hint{font-size:11px;color:var(--text-tertiary);}
 
-  .controls {
-    display: flex; gap: 0.75rem; align-items: center;
-    flex-wrap: wrap; margin-bottom: 1.5rem;
-  }
-  .btn {
-    padding: 0.5rem 1.25rem; border-radius: 4px; cursor: pointer;
-    font-family: 'Courier New', monospace; font-size: 0.8rem; letter-spacing: 0.05em;
-    border: 1px solid var(--border); transition: all 0.15s; text-transform: uppercase;
-  }
-  .btn-primary {
-    background: var(--accent); color: #fff; border-color: var(--accent);
-  }
-  .btn-primary:hover { background: var(--accent2); border-color: var(--accent2); }
-  .btn-ghost { background: transparent; color: var(--text); }
-  .btn-ghost:hover { background: var(--surface2); border-color: var(--muted); }
-  .btn-danger { background: transparent; color: var(--danger); border-color: var(--danger); }
-  .btn-danger:hover { background: rgba(255,71,87,0.08); }
-  .btn:disabled { opacity: 0.4; cursor: not-allowed; }
+.meta-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin-top:10px;}
+.metric{background:var(--bg-secondary);border-radius:var(--r-md);padding:8px 10px;}
+.metric-label{font-size:11px;color:var(--text-secondary);margin-bottom:2px;}
+.metric-val{font-size:13px;font-weight:500;font-family:monospace;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
 
-  .search-box {
-    flex: 1; min-width: 180px;
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 4px; padding: 0.5rem 0.75rem;
-    color: var(--text); font-family: 'Courier New', monospace; font-size: 0.8rem;
-    outline: none;
-  }
-  .search-box:focus { border-color: var(--accent); }
-  .search-box::placeholder { color: var(--muted); }
+.field{display:flex;flex-direction:column;gap:5px;}
+.field label{font-size:12px;color:var(--text-secondary);font-weight:500;}
+.field textarea{font-family:monospace;font-size:11px;padding:10px;border-radius:var(--r-md);border:0.5px solid var(--border-s);background:var(--bg-secondary);color:var(--text-primary);width:100%;resize:vertical;min-height:220px;line-height:1.65;}
+.field textarea:focus{outline:none;border-color:var(--border-p);}
 
-  .progress-wrap {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 4px; height: 6px; overflow: hidden; margin-bottom: 1.5rem;
-  }
-  .progress-bar {
-    height: 100%; background: var(--accent); width: 0%;
-    transition: width 0.2s; box-shadow: 0 0 8px rgba(255,107,53,0.5);
-  }
+.seg-ctrl{display:flex;gap:0;border:0.5px solid var(--border-s);border-radius:var(--r-md);overflow:hidden;width:fit-content;}
+.seg-btn{font-family:inherit;font-size:12px;font-weight:500;padding:6px 18px;border:none;background:transparent;color:var(--text-secondary);cursor:pointer;transition:background .12s,color .12s;}
+.seg-btn:not(:last-child){border-right:0.5px solid var(--border-s);}
+.seg-btn.active{background:var(--text-primary);color:var(--bg-primary);}
+.seg-btn:hover:not(.active){background:var(--bg-secondary);}
 
-  .log {
-    background: var(--card-bg); border: 1px solid var(--border);
-    border-radius: 6px; padding: 0.75rem 1rem; margin-bottom: 1.5rem;
-    font-size: 0.72rem; color: var(--muted); max-height: 90px; overflow-y: auto;
-    line-height: 1.7;
-  }
-  .log .ok { color: var(--success); }
-  .log .err { color: var(--danger); }
-  .log .info { color: var(--accent); }
+.xor-note{font-size:12px;color:var(--text-tertiary);margin-top:8px;padding:6px 10px;background:var(--bg-secondary);border-radius:var(--r-md);}
 
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: 8px;
-  }
-  .tile {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 6px; padding: 6px; cursor: pointer;
-    transition: all 0.15s; position: relative; overflow: hidden;
-  }
-  .tile:hover {
-    border-color: var(--accent);
-    box-shadow: 0 0 16px rgba(255,107,53,0.15);
-    transform: translateY(-1px);
-  }
-  .tile.selected { border-color: var(--accent); background: rgba(255,107,53,0.06); }
-  .tile-img {
-    width: 100%; aspect-ratio: 1;
-    image-rendering: pixelated;
-    display: block; border-radius: 3px;
-    background: #090b10;
-  }
-  .tile-name {
-    font-size: 0.6rem; color: var(--muted); margin-top: 4px;
-    white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
-    text-align: center;
-  }
-  .tile-dim {
-    font-size: 0.55rem; color: var(--accent); text-align: center;
-  }
-  .tile-sel {
-    position: absolute; top: 4px; right: 4px;
-    width: 14px; height: 14px; border-radius: 50%;
-    background: var(--accent); display: none;
-    align-items: center; justify-content: center; font-size: 9px; color: #fff;
-  }
-  .tile.selected .tile-sel { display: flex; }
+.btn-row{display:flex;gap:8px;flex-wrap:wrap;}
+.btn{font-family:inherit;font-size:13px;font-weight:500;padding:7px 16px;border-radius:var(--r-md);border:0.5px solid var(--border-s);background:transparent;color:var(--text-primary);cursor:pointer;transition:background .12s;white-space:nowrap;}
+.btn:hover:not(:disabled){background:var(--bg-secondary);}
+.btn:active:not(:disabled){transform:scale(0.98);}
+.btn:disabled{opacity:.35;cursor:default;}
+.btn-primary{background:var(--text-primary);color:var(--bg-primary);border-color:transparent;}
+.btn-primary:hover:not(:disabled){opacity:.88;background:var(--text-primary);}
 
-  .empty {
-    text-align: center; padding: 4rem; color: var(--muted); font-size: 0.8rem;
-  }
+.status{font-size:13px;padding:7px 11px;border-radius:var(--r-md);margin-top:10px;background:var(--bg-secondary);color:var(--text-secondary);display:flex;align-items:flex-start;gap:6px;}
+.status.ok{background:var(--bg-success);color:var(--text-success);}
+.status.err{background:var(--bg-danger);color:var(--text-danger);}
+.status.warn{background:var(--bg-warn);color:var(--text-warn);}
+.dot{width:6px;height:6px;border-radius:50%;background:currentColor;flex-shrink:0;margin-top:4px;}
 
-  #lightbox {
-    display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.88);
-    z-index: 999; align-items: center; justify-content: center;
-    padding: 1rem;
-  }
-  #lightbox.open { display: flex; }
-  .lb-box {
-    background: var(--surface); border: 1px solid var(--border);
-    border-radius: 8px; max-width: 520px; width: 100%; padding: 1.5rem;
-  }
-  .lb-img {
-    image-rendering: pixelated;
-    max-width: 100%; max-height: 350px; display: block;
-    margin: 0 auto; background: #090b10; border-radius: 4px;
-  }
-  .lb-meta {
-    margin-top: 1rem; font-size: 0.72rem; color: var(--muted);
-    display: grid; grid-template-columns: 1fr 1fr; gap: 4px;
-  }
-  .lb-meta span { color: var(--text); }
-  .lb-actions { display: flex; gap: 0.5rem; margin-top: 1rem; justify-content: flex-end; }
-  .lb-close {
-    position: absolute; top: 1rem; right: 1.5rem;
-    background: none; border: none; color: var(--muted);
-    font-size: 1.5rem; cursor: pointer; z-index: 1000;
-  }
+.dl-meta{font-size:12px;color:var(--text-tertiary);margin-top:8px;}
+.mt{margin-top:10px;}
 
-  ::-webkit-scrollbar { width: 4px; }
-  ::-webkit-scrollbar-track { background: transparent; }
-  ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 2px; }
+.tabs{display:flex;gap:2px;margin-bottom:12px;border-bottom:0.5px solid var(--border-t);flex-wrap:wrap;}
+.tab-btn{font-family:inherit;font-size:13px;font-weight:500;padding:8px 16px 10px;background:transparent;border:none;color:var(--text-secondary);cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s;}
+.tab-btn:hover{color:var(--text-primary);}
+.tab-btn.active{color:var(--text-primary);border-bottom-color:var(--text-primary);}
+.tab-panel{display:none;}
+.tab-panel.active{display:block;}
 
-  .section-header {
-    display: flex; align-items: center; gap: 0.5rem;
-    font-size: 0.65rem; text-transform: uppercase; letter-spacing: 0.2em;
-    color: var(--muted); margin-bottom: 1rem; padding-bottom: 0.5rem;
-    border-bottom: 1px solid var(--border);
-  }
-  .section-header::before {
-    content: ''; width: 3px; height: 14px;
-    background: var(--accent); display: block; border-radius: 2px;
-  }
-  .hidden { display: none !important; }
+/* Preview panel */
+.preview-panel{border:0.5px solid var(--border-t);border-radius:var(--r-md);background:var(--bg-secondary);overflow:hidden;}
+.preview-tabs{display:flex;border-bottom:0.5px solid var(--border-t);background:var(--bg-primary);}
+.preview-tab{font-family:inherit;font-size:11px;font-weight:500;padding:6px 14px;border:none;background:transparent;color:var(--text-tertiary);cursor:pointer;border-bottom:2px solid transparent;transition:color .12s;}
+.preview-tab.active{color:var(--text-primary);border-bottom-color:var(--text-primary);}
+.preview-body{padding:12px;max-height:420px;overflow-y:auto;}
+.label-list{display:flex;flex-direction:column;gap:2px;}
+.label-item{border-radius:var(--r-md);overflow:hidden;border:0.5px solid var(--border-t);}
+.label-hdr{display:flex;align-items:center;gap:8px;padding:7px 10px;background:var(--bg-primary);cursor:pointer;user-select:none;}
+.label-hdr:hover{background:var(--bg-secondary);}
+.label-idx{font-size:10px;color:var(--text-tertiary);font-family:monospace;min-width:28px;}
+.label-name{font-size:12px;font-weight:500;flex:1;font-family:monospace;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+.label-caret{font-size:10px;color:var(--text-tertiary);transition:transform .15s;}
+.label-caret.open{transform:rotate(90deg);}
+.label-body{display:none;padding:8px 10px 10px;background:var(--bg-secondary);font-family:monospace;font-size:11px;line-height:1.6;white-space:pre-wrap;word-break:break-all;color:var(--text-secondary);border-top:0.5px solid var(--border-t);}
+.label-body.open{display:block;}
+.search-bar{display:flex;gap:6px;margin-bottom:10px;}
+.search-bar input{font-family:inherit;font-size:12px;padding:6px 10px;border-radius:var(--r-md);border:0.5px solid var(--border-s);background:var(--bg-primary);color:var(--text-primary);flex:1;}
+.search-bar input:focus{outline:none;border-color:var(--border-p);}
+.preview-stats{font-size:11px;color:var(--text-tertiary);margin-bottom:8px;}
+.raw-view{font-family:monospace;font-size:11px;line-height:1.65;white-space:pre-wrap;word-break:break-all;color:var(--text-secondary);}
+.empty-note{font-size:13px;color:var(--text-tertiary);text-align:center;padding:2rem 0;}
 </style>
 </head>
 <body>
-<div class="scanline"></div>
-<div id="lightbox">
-  <button class="lb-close" onclick="closeLightbox()">×</button>
-  <div class="lb-box">
-    <canvas id="lb-canvas" class="lb-img"></canvas>
-    <div class="lb-meta" id="lb-meta"></div>
-    <div class="lb-actions">
-      <button class="btn btn-ghost" onclick="closeLightbox()">close</button>
-      <button class="btn btn-primary" onclick="downloadCurrent()">↓ save png</button>
-    </div>
-  </div>
-</div>
+<div class="wrap">
+  <h1>USR2 Script Converter</h1>
+  <p class="sub">RE Engine USR2 (GS4/GS56) script container ↔ JSON ↔ GMD · Auto-detects format</p>
 
-<div class="container">
-  <header>
-    <div class="logo">cpac<span>2d</span>.bin</div>
-    <div class="subtitle">Apollo Justice — 2D Asset Extractor</div>
-    <div class="badge">NDS · Capcom Archive Format</div>
-  </header>
-
-  <div id="upload-zone">
-    <div class="drop-zone" id="drop-zone" onclick="document.getElementById('file-input').click()">
-      <span class="drop-icon">📦</span>
-      <div class="drop-title">drop cpac2d.bin here</div>
-      <div class="drop-sub">or click to browse · accepts any .bin Capcom 2D archive</div>
-    </div>
-    <input type="file" id="file-input" accept=".bin">
+  <div class="tabs">
+    <button class="tab-btn active" onclick="switchTab('decode')">USR2 → JSON</button>
+    <button class="tab-btn" onclick="switchTab('encode')">JSON → USR2</button>
+    <button class="tab-btn" onclick="switchTab('gmd')">USR2 → GMD</button>
   </div>
 
-  <div id="result-zone" class="hidden">
-    <div class="stats-bar">
-      <div class="stat"><div class="stat-val" id="stat-total">0</div><div class="stat-label">images</div></div>
-      <div class="stat"><div class="stat-val" id="stat-ok">0</div><div class="stat-label">decoded</div></div>
-      <div class="stat"><div class="stat-val" id="stat-err">0</div><div class="stat-label">errors</div></div>
-      <div class="stat"><div class="stat-val" id="stat-size">—</div><div class="stat-label">file size</div></div>
+  <!-- DECODE: USR2 -> JSON -->
+  <div id="tab-decode" class="tab-panel active">
+    <div class="card">
+      <div class="card-title">
+        Input .user.2.en file
+        <span class="card-title-right" id="dec-ver-badge"></span>
+      </div>
+      <label class="drop" id="drop-decode">
+        <div class="drop-icon"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+        <span class="drop-label" id="dec-drop-text">Click or drop a .user.2.en file</span>
+        <span class="drop-hint">USR / RSZ container — GS4 or GS56, auto-detected</span>
+        <input type="file" id="dec-file-input" accept=".en,.bin,.user2,*">
+      </label>
+      <div class="meta-grid" id="dec-meta" style="display:none"></div>
     </div>
 
-    <div class="log" id="log"></div>
-
-    <div class="progress-wrap hidden" id="prog-wrap">
-      <div class="progress-bar" id="progress-bar"></div>
+    <div class="card">
+      <div class="card-title">Convert</div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btn-decode" disabled onclick="runDecode()">Decode USR2 → JSON</button>
+      </div>
+      <div class="status" id="dec-status" style="display:none"><span class="dot"></span><span id="dec-status-text"></span></div>
     </div>
 
-    <div class="controls">
-      <input type="text" class="search-box" id="search" placeholder="filter by name or dimensions…">
-      <button class="btn btn-primary" id="btn-zip" onclick="downloadZip()">↓ download all as .zip</button>
-      <button class="btn btn-ghost" onclick="selectAll()">select all</button>
-      <button class="btn btn-ghost" onclick="selectNone()">deselect all</button>
-      <button class="btn btn-primary" id="btn-sel-zip" onclick="downloadSelected()" disabled>↓ download selected</button>
-      <button class="btn btn-danger" onclick="resetTool()">× reset</button>
+    <div class="card" id="dec-out-card" style="display:none">
+      <div class="card-title">Output</div>
+      <div class="field">
+        <label>Decoded JSON (editable before download)</label>
+        <textarea id="dec-preview" spellcheck="false"></textarea>
+      </div>
+      <div class="btn-row mt">
+        <button class="btn btn-primary" onclick="dlDecoded()">Download .json</button>
+      </div>
+      <div class="dl-meta" id="dec-dl-meta"></div>
+    </div>
+  </div>
+
+  <!-- ENCODE: JSON -> USER2 -->
+  <div id="tab-encode" class="tab-panel">
+    <div class="card">
+      <div class="card-title">Input .json file <span class="card-title-right">{"name": ..., "labels": [[label, text], ...]}</span></div>
+      <label class="drop" id="drop-encode">
+        <div class="drop-icon"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+        <span class="drop-label" id="enc-drop-text">Click or drop a .json file</span>
+        <span class="drop-hint">.json</span>
+        <input type="file" id="enc-file-input" accept=".json,*">
+      </label>
     </div>
 
-    <div class="section-header" id="grid-header">extracted images</div>
-    <div class="grid" id="image-grid"></div>
+    <div class="card">
+      <div class="card-title">Convert</div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btn-encode" disabled onclick="runEncode()">Encode JSON → USR2</button>
+      </div>
+      <div class="status" id="enc-status" style="display:none"><span class="dot"></span><span id="enc-status-text"></span></div>
+    </div>
+
+    <div class="card" id="enc-out-card" style="display:none">
+      <div class="card-title">Output</div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="dlEncoded()">Download .user.2.en</button>
+      </div>
+      <div class="dl-meta" id="enc-dl-meta"></div>
+    </div>
+  </div>
+
+  <!-- USR2 -> GMD -->
+  <div id="tab-gmd" class="tab-panel">
+    <div class="card">
+      <div class="card-title">
+        Input .user.2.en file
+        <span class="card-title-right" id="gmd-ver-badge"></span>
+      </div>
+      <label class="drop" id="drop-gmd">
+        <div class="drop-icon"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
+        <span class="drop-label" id="gmd-drop-text">Click or drop a .user.2.en file</span>
+        <span class="drop-hint">USR / RSZ container with GS56 labels</span>
+        <input type="file" id="gmd-file-input" accept=".en,.bin,.user2,*">
+      </label>
+      <div class="meta-grid" id="gmd-meta" style="display:none"></div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Target GMD version</div>
+      <div class="seg-ctrl">
+        <button class="seg-btn active" id="gmd-v1-btn" onclick="setGmdVer(1)">GMD V1 · GS5</button>
+        <button class="seg-btn" id="gmd-v2-btn" onclick="setGmdVer(2)">GMD V2 · GS6</button>
+      </div>
+      <div class="xor-note" id="gmd-xor-note">V1 (GS5 / Dual Destinies) always applies XOR encryption.</div>
+    </div>
+
+    <div class="card">
+      <div class="card-title">Pipeline <span class="card-title-right">USR2 → JSON → GMD-text → .gmd binary</span></div>
+      <div class="btn-row">
+        <button class="btn btn-primary" id="btn-gmd" disabled onclick="runGmd()">Convert USR2 → .gmd</button>
+      </div>
+      <div class="status" id="gmd-status" style="display:none"><span class="dot"></span><span id="gmd-status-text"></span></div>
+    </div>
+
+    <div class="card" id="gmd-out-card" style="display:none">
+      <div class="card-title">Output</div>
+      <div class="btn-row">
+        <button class="btn btn-primary" onclick="dlGmd()">Download .gmd</button>
+      </div>
+      <div class="dl-meta" id="gmd-dl-meta"></div>
+
+      <!-- Text preview panel -->
+      <div style="margin-top:16px;">
+        <div style="font-size:11px;font-weight:500;color:var(--text-secondary);text-transform:uppercase;letter-spacing:.06em;margin-bottom:8px;">Label preview</div>
+        <div class="preview-panel">
+          <div class="preview-tabs">
+            <button class="preview-tab active" onclick="switchPreviewTab('labels')">Labels</button>
+            <button class="preview-tab" onclick="switchPreviewTab('raw')">Raw GMD text</button>
+          </div>
+          <div class="preview-body">
+            <div id="preview-labels" class="preview-tab-pane">
+              <div class="empty-note">Run a conversion to see preview.</div>
+            </div>
+            <div id="preview-raw" class="preview-tab-pane" style="display:none">
+              <div class="empty-note">Run a conversion to see preview.</div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
 </div>
 
 <script>
-const images = [];
-let lbIdx = -1;
-
-function logMsg(msg, cls='') {
-  const log = document.getElementById('log');
-  const line = document.createElement('div');
-  if (cls) line.className = cls;
-  line.textContent = msg;
-  log.appendChild(line);
-  log.scrollTop = log.scrollHeight;
+// ── UI ──────────────────────────────────────────────
+function switchTab(name) {
+  document.querySelectorAll('.tab-btn').forEach((b,i)=>{
+    b.classList.toggle('active',['decode','encode','gmd'][i]===name);
+  });
+  document.querySelectorAll('.tab-panel').forEach(p=>p.classList.remove('active'));
+  document.getElementById('tab-'+name).classList.add('active');
 }
 
-function fmtSize(b) {
-  if (b < 1024) return b + ' B';
-  if (b < 1048576) return (b/1024).toFixed(1) + ' KB';
-  return (b/1048576).toFixed(2) + ' MB';
+let gmdTargetVer = 1;
+function setGmdVer(v) {
+  gmdTargetVer = v;
+  document.getElementById('gmd-v1-btn').classList.toggle('active', v===1);
+  document.getElementById('gmd-v2-btn').classList.toggle('active', v===2);
+  document.getElementById('gmd-xor-note').textContent = v===1
+    ? 'V1 (GS5 / Dual Destinies) always applies XOR encryption.'
+    : 'V2 (GS6 / Spirit of Justice) — no XOR encryption applied.';
 }
 
-document.getElementById('drop-zone').addEventListener('dragover', e => {
-  e.preventDefault();
-  e.currentTarget.classList.add('over');
-});
-document.getElementById('drop-zone').addEventListener('dragleave', e => {
-  e.currentTarget.classList.remove('over');
-});
-document.getElementById('drop-zone').addEventListener('drop', e => {
-  e.preventDefault();
-  e.currentTarget.classList.remove('over');
-  if (e.dataTransfer.files[0]) processFile(e.dataTransfer.files[0]);
-});
-document.getElementById('file-input').addEventListener('change', e => {
-  if (e.target.files[0]) processFile(e.target.files[0]);
-});
-document.getElementById('search').addEventListener('input', filterGrid);
-
-async function processFile(file) {
-  document.getElementById('upload-zone').classList.add('hidden');
-  document.getElementById('result-zone').classList.remove('hidden');
-  document.getElementById('stat-size').textContent = fmtSize(file.size);
-  logMsg(`loading: ${file.name} (${fmtSize(file.size)})`, 'info');
-
-  const buf = await file.arrayBuffer();
-  const view = new DataView(buf);
-  const u8 = new Uint8Array(buf);
-
-  // Try to parse the archive
-  extractArchive(view, u8, buf);
+function switchPreviewTab(name) {
+  document.querySelectorAll('.preview-tab').forEach((b,i)=>{
+    b.classList.toggle('active',['labels','raw'][i]===name);
+  });
+  document.getElementById('preview-labels').style.display = name==='labels'?'':'none';
+  document.getElementById('preview-raw').style.display   = name==='raw'?'':'none';
 }
 
-function extractArchive(view, u8, buf) {
-  const progWrap = document.getElementById('prog-wrap');
-  progWrap.classList.remove('hidden');
+function setStatus(id, msg, cls) {
+  const el=document.getElementById(id);
+  el.className='status '+(cls||'');
+  el.style.display='flex';
+  el.querySelector('span:last-child').textContent=msg;
+}
 
-  // The cpac2d.bin header structure:
-  // 0x00: uint32 header_size (usually 0x30)
-  // 0x04: uint32 total_file_size
-  // 0x08-0x2F: rest of header (file count etc.)
-  // Files are stored sequentially; we scan for valid image headers
+function setMeta(gridId, pairs) {
+  const g=document.getElementById(gridId);
+  g.innerHTML=pairs.map(([l,v])=>`<div class="metric"><div class="metric-label">${l}</div><div class="metric-val" title="${v}">${v}</div></div>`).join('');
+  g.style.display='grid';
+}
 
-  const headerSize = view.getUint32(0, true);
-  const totalSize = view.getUint32(4, true);
+function formatBytes(b){
+  if(b<1024)return b+' B';
+  if(b<1048576)return(b/1024).toFixed(1)+' KB';
+  return(b/1048576).toFixed(2)+' MB';
+}
+function baseName(n){
+  // strip known multi-part extensions like .user.2.en, .user2.en, .json, .bin
+  return n.replace(/\.(user\.2\.en|user2\.en|json|bin|gmd)$/i,'');
+}
 
-  logMsg(`archive header: ${headerSize} bytes, reported size: ${fmtSize(totalSize)}`);
+function setupDrop(dropId,inputId,onFile){
+  const zone=document.getElementById(dropId);
+  const input=document.getElementById(inputId);
+  zone.addEventListener('dragover',e=>{e.preventDefault();zone.classList.add('dragover');});
+  zone.addEventListener('dragleave',()=>zone.classList.remove('dragover'));
+  zone.addEventListener('drop',e=>{e.preventDefault();zone.classList.remove('dragover');const f=e.dataTransfer.files[0];if(f)onFile(f);});
+  input.addEventListener('change',()=>{const f=input.files[0];if(f)onFile(f);});
+}
 
-  // Strategy 1: Check if there's a file table at the header
-  // Some variants store file count at offset 8
-  let fileCount = view.getUint32(8, true);
-  
-  // Sanity check file count
-  if (fileCount === 0 || fileCount > 10000) {
-    // Try reading from different offset
-    fileCount = view.getUint16(8, true);
+function dlBlob(blob,name){
+  const url=URL.createObjectURL(blob);
+  const a=document.createElement('a');a.href=url;a.download=name;a.click();
+  setTimeout(()=>URL.revokeObjectURL(url),3000);
+}
+function readArrayBuffer(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.onerror=rej;r.readAsArrayBuffer(f);});}
+function readText(f){return new Promise((res,rej)=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.onerror=rej;r.readAsText(f,'utf-8');});}
+
+// ── BINARY HELPERS ──────────────────────────────────
+class Reader{
+  constructor(buf){this.a=buf instanceof Uint8Array?buf:new Uint8Array(buf);this.v=new DataView(this.a.buffer,this.a.byteOffset);this.p=0;}
+  u32(){const v=this.v.getUint32(this.p,true);this.p+=4;return v;}
+  u64(){const lo=this.v.getUint32(this.p,true);const hi=this.v.getUint32(this.p+4,true);this.p+=8;return hi*4294967296+lo;}
+  bytes(n){const s=this.a.slice(this.p,this.p+n);this.p+=n;return s;}
+  // read UTF-16LE string of `chars` u16 code units, dropping trailing NUL
+  strU16(chars){
+    const out=[];
+    for(let i=0;i<chars;i++){
+      const c=this.v.getUint16(this.p,true);this.p+=2;
+      out.push(c);
+    }
+    // drop trailing null terminator (last code unit)
+    if(out.length && out[out.length-1]===0) out.pop();
+    return out.map(c=>String.fromCharCode(c)).join('');
   }
-  logMsg(`estimated file entries: ${fileCount}`, 'info');
+  seek(p){this.p=p;}
+  tell(){return this.p;}
+  get rem(){return this.a.length-this.p;}
+}
 
-  // Try to find file offsets — scan for image headers
-  // Each image entry starts with 0x14 (20) byte header:
-  // [0x00] uint32: header_size (0x14)
-  // [0x04] uint32: palette_offset (relative to start of entry)
-  // [0x08] uint32: palette_size (in bytes, = numColors * 2)
-  // [0x0C] uint32: image_data_offset (relative to start of entry)
-  // [0x10] uint32: image_data_size
-
-  // Additionally look for NNNN (Nintendo) format sub-images
-  const entries = [];
-
-  // Method 1: Use file table if header is valid
-  let usedTable = false;
-  if (headerSize === 0x30 || headerSize === 0x14 || headerSize === 0x18 || headerSize === 0x20) {
-    // Try to parse a file offset table starting at headerSize
-    // Some cpac2d formats have: [numFiles][offsets...] right after header
-    try {
-      const possibleCount = view.getUint32(headerSize, true);
-      if (possibleCount > 0 && possibleCount <= 5000) {
-        for (let i = 0; i < possibleCount; i++) {
-          const off = view.getUint32(headerSize + 4 + i * 4, true);
-          if (off < buf.byteLength - 0x14) {
-            entries.push(off);
-          }
-        }
-        if (entries.length > 10) {
-          logMsg(`file table found: ${entries.length} entries`, 'ok');
-          usedTable = true;
-        }
-      }
-    } catch(e) {}
+class Writer{
+  constructor(){this.chunks=[];this.size=0;}
+  write(d){const a=d instanceof Uint8Array?d:new Uint8Array(d);this.chunks.push(a);this.size+=a.length;}
+  u8(v){this.write([v]);}
+  u32(v){const b=new ArrayBuffer(4);new DataView(b).setUint32(0,v>>>0,true);this.write(new Uint8Array(b));}
+  u64(v){
+    const b=new ArrayBuffer(8);const dv=new DataView(b);
+    const lo=v % 4294967296, hi=Math.floor(v/4294967296);
+    dv.setUint32(0,lo>>>0,true);dv.setUint32(4,hi>>>0,true);
+    this.write(new Uint8Array(b));
   }
-
-  // Method 2: Scan linearly for valid image headers
-  if (!usedTable || entries.length === 0) {
-    entries.length = 0;
-    logMsg('scanning for image headers…', 'info');
-    scanForImages(view, u8, buf, entries);
+  strU16(s){ // writes s + '\0' as UTF-16LE
+    const buf=new Uint8Array((s.length+1)*2);
+    const dv=new DataView(buf.buffer);
+    for(let i=0;i<s.length;i++)dv.setUint16(i*2,s.charCodeAt(i),true);
+    dv.setUint16(s.length*2,0,true);
+    this.write(buf);
   }
+  pad16(){while(this.size%16!==0)this.u8(0);}
+  pad4(){while(this.size%4!==0)this.u8(0);}
+  toU8(){const out=new Uint8Array(this.size);let off=0;for(const c of this.chunks){out.set(c,off);off+=c.length;}return out;}
+}
 
-  if (entries.length === 0) {
-    logMsg('no valid image headers found — trying deep scan…', 'err');
-    deepScan(view, u8, buf, entries);
-  }
+function bytesEq(a,str){
+  if(a.length<str.length)return false;
+  for(let i=0;i<str.length;i++)if(a[i]!==str.charCodeAt(i))return false;
+  return true;
+}
 
-  document.getElementById('stat-total').textContent = entries.length;
-  logMsg(`found ${entries.length} image offsets`, entries.length > 0 ? 'ok' : 'err');
+const roundUp=(x,l)=>Math.ceil(x/l)*l;
 
-  let ok = 0, err = 0;
-  const grid = document.getElementById('image-grid');
-  grid.innerHTML = '';
-  images.length = 0;
+// ── CLASS IDs ────────────────────────────────────────
+const USRHDR_SIZE = 48;
+const CLASS_GS4  = [0xdaa48445, 0x5212daa2];
+const CLASS_GS56 = [0x83f3f042, 0x0b263156];
+const CLASS_NAME = [0xee933aa7, 0x1aa1a4ac];
 
-  for (let i = 0; i < entries.length; i++) {
-    const pct = Math.round((i / entries.length) * 100);
-    document.getElementById('progress-bar').style.width = pct + '%';
+// ── DETECT FORMAT ────────────────────────────────────
+// Returns {ok:bool, isGs56:bool, instanceCount, dataOffset, error}
+function detectUsr2(u8){
+  if(u8.length<USRHDR_SIZE+16)return{ok:false,error:'File too small'};
+  if(!bytesEq(u8,'USR\0'))return{ok:false,error:'Bad magic (expected "USR\\0")'};
+  const r=new Reader(u8);
+  r.seek(4);
+  for(let i=0;i<3;i++){if(r.u32()!==0)return{ok:false,error:'Unexpected resource/userdata/info count'};}
+  for(let i=0;i<3;i++){if(r.u64()!==USRHDR_SIZE)return{ok:false,error:'Unexpected USR header offset'};}
+  // padded to 16 already (48 is multiple of 16)
+  if(r.tell()!==USRHDR_SIZE)return{ok:false,error:'Header size mismatch'};
+  if(!bytesEq(u8.slice(r.tell()),'RSZ\0'))return{ok:false,error:'Bad RSZ magic'};
+  r.seek(r.tell()+4);
+  if(r.u32()!==16)return{ok:false,error:'Unexpected RSZ version'};
+  if(r.u32()!==1)return{ok:false,error:'Unexpected object count'};
+  const instanceCountPlus1=r.u32();
+  const instanceCount=instanceCountPlus1-1;
+  if(r.u32()!==0)return{ok:false,error:'Unexpected userdata count'};
+  if(r.u32()!==0)return{ok:false,error:'Unexpected reserved field'};
+  const instanceOffset=r.u64();
+  const dataOffset=r.u64();
+  if(r.u64()!==dataOffset)return{ok:false,error:'userdata offset != data offset'};
+  if(r.u32()!==instanceCount)return{ok:false,error:'object table mismatch'};
+  if(r.tell()!==USRHDR_SIZE+instanceOffset)return{ok:false,error:'instance offset mismatch'};
+  if(instanceCount===0)return{ok:false,error:'instance count is zero'};
+  if(r.u64()!==0)return{ok:false,error:'expected null entry'};
 
-    try {
-      const imgData = decodeImage(view, u8, entries[i], i);
-      if (imgData) {
-        images.push(imgData);
-        addTile(imgData, images.length - 1);
-        ok++;
-      } else {
-        err++;
-      }
-    } catch(e) {
-      err++;
-      if (err <= 5) logMsg(`entry ${i}: ${e.message}`, 'err');
+  let isGs56=false;
+  for(let i=0;i<instanceCount;i++){
+    const typeId=r.u32(),crc=r.u32();
+    const cls=[typeId,crc];
+    if(cls[0]===CLASS_GS4[0]&&cls[1]===CLASS_GS4[1]){
+      if(instanceCount!==1)return{ok:false,error:'GS4 class with >1 instance'};
+    }else if(cls[0]===CLASS_GS56[0]&&cls[1]===CLASS_GS56[1]){
+      if(i===instanceCount-1)return{ok:false,error:'GS56 class at last instance'};
+      isGs56=true;
+    }else if(cls[0]===CLASS_NAME[0]&&cls[1]===CLASS_NAME[1]){
+      if(i!==instanceCount-1)return{ok:false,error:'NAME class before last instance'};
+      isGs56=true;
+    }else{
+      return{ok:false,error:`unknown class id 0x${typeId.toString(16)} / 0x${crc.toString(16)}`};
     }
   }
-
-  document.getElementById('progress-bar').style.width = '100%';
-  document.getElementById('stat-ok').textContent = ok;
-  document.getElementById('stat-err').textContent = err;
-  logMsg(`done: ${ok} images decoded, ${err} errors`, ok > 0 ? 'ok' : 'err');
-
-  if (ok === 0) {
-    document.getElementById('image-grid').innerHTML =
-      '<div class="empty">⚠ Could not decode images from this file.<br>This tool supports Apollo Justice DS (cpac2d.bin) Capcom archive format.</div>';
-  }
+  // pad to 16
+  let p=r.tell();
+  p=roundUp(p,16);
+  if(p!==USRHDR_SIZE+dataOffset)return{ok:false,error:'data offset mismatch'};
+  return{ok:true,isGs56,instanceCount,dataOffset:USRHDR_SIZE+dataOffset};
 }
 
-function scanForImages(view, u8, buf, entries) {
-  // Walk through the buffer looking for valid 0x14-byte image headers
-  // Heuristic: header_len=0x14, palette_offset in reasonable range, palette_size multiple of 2
-  const len = buf.byteLength;
-  let offset = 0x30; // skip archive header
+// ── USR2 -> JSON ─────────────────────────────────────
+function decodeUsr2(u8){
+  const det=detectUsr2(u8);
+  if(!det.ok)throw new Error(det.error);
+  const r=new Reader(u8);
+  r.seek(det.dataOffset);
 
-  while (offset < len - 0x14) {
-    try {
-      const hdrLen = view.getUint32(offset, true);
-      const palOff = view.getUint32(offset + 4, true);
-      const palSize = view.getUint32(offset + 8, true);
-      const imgOff = view.getUint32(offset + 12, true);
-      const imgSize = view.getUint32(offset + 16, true);
-
-      const isValidHeader = (
-        hdrLen === 0x14 &&
-        palOff >= 0x14 && palOff < 0x10000 &&
-        palSize > 0 && palSize <= 0x800 && (palSize % 2 === 0) &&
-        imgOff >= palOff + palSize && imgOff < 0x20000 &&
-        imgSize > 0 && imgSize < 0x100000 &&
-        offset + imgOff + imgSize <= len
-      );
-
-      if (isValidHeader) {
-        entries.push(offset);
-        offset += imgOff + imgSize;
-        // Align to 4 bytes
-        while (offset % 4 !== 0) offset++;
-        continue;
-      }
-    } catch(e) {}
-    offset += 4;
-  }
-}
-
-function deepScan(view, u8, buf, entries) {
-  // Alternative: check for NCLR (palette) or NCGR (char data) Nintendo formats
-  // embedded inside the Capcom container
-  const len = buf.byteLength;
-  const sig1 = [0x52, 0x4C, 0x43, 0x4E]; // RLCN = NCLR reversed
-  const sig2 = [0x52, 0x47, 0x43, 0x4E]; // RGCN = NCGR reversed
-
-  for (let i = 0; i < len - 4; i++) {
-    if (u8[i]===sig2[0] && u8[i+1]===sig2[1] && u8[i+2]===sig2[2] && u8[i+3]===sig2[3]) {
-      entries.push(i);
-      i += 4;
+  if(det.isGs56){
+    const data={name:null,labels:[]};
+    const labelCount=det.instanceCount-1;
+    for(let i=0;i<labelCount;i++){
+      const labelSize=r.u32();
+      const label=r.strU16(labelSize);
+      // pad to 4
+      while(r.tell()%4!==0)r.seek(r.tell()+1);
+      const textSize=r.u32();
+      const text=r.strU16(textSize);
+      while(r.tell()%4!==0)r.seek(r.tell()+1);
+      data.labels.push([label,text]);
     }
-  }
-
-  if (entries.length > 0) {
-    logMsg(`found ${entries.length} NCGR Nintendo format entries`, 'ok');
-  }
-}
-
-function decodeImage(view, u8, offset, idx) {
-  const bufLen = u8.length;
-
-  // Check if it looks like a standard Capcom image header
-  const hdrLen = view.getUint32(offset, true);
-
-  if (hdrLen === 0x14) {
-    return decodeCapcomImage(view, u8, offset, idx);
-  }
-
-  // Try NCGR format (Nintendo DS tile format)
-  if (u8[offset]===0x52 && u8[offset+1]===0x47 && u8[offset+2]===0x43 && u8[offset+3]===0x4E) {
-    return null; // Would need separate NCLR palette — skip for now
-  }
-
-  return null;
-}
-
-function decodeCapcomImage(view, u8, offset, idx) {
-  // Header layout (all little-endian uint32):
-  // +0x00: header_size (=0x14)
-  // +0x04: palette_offset (from start of entry)
-  // +0x08: palette_size (numColors * 2, BGR555 format)
-  // +0x0C: image_data_offset (from start of entry)
-  // +0x10: image_data_size
-
-  const hdrLen    = view.getUint32(offset + 0x00, true);
-  const palOff    = view.getUint32(offset + 0x04, true);
-  const palSize   = view.getUint32(offset + 0x08, true);
-  const imgOff    = view.getUint32(offset + 0x0C, true);
-  const imgSize   = view.getUint32(offset + 0x10, true);
-
-  const numColors = palSize / 2;
-  const is4bpp = numColors <= 16;
-  const is8bpp = numColors > 16 && numColors <= 256;
-
-  if (!is4bpp && !is8bpp) {
-    throw new Error(`unexpected palette size: ${numColors} colors`);
-  }
-
-  // Parse BGR555 palette
-  const palette = [];
-  const palBase = offset + palOff;
-  for (let c = 0; c < numColors; c++) {
-    const raw = view.getUint16(palBase + c * 2, true);
-    const r = (raw & 0x1F) << 3;
-    const g = ((raw >> 5) & 0x1F) << 3;
-    const b = ((raw >> 10) & 0x1F) << 3;
-    palette.push([r, g, b]);
-  }
-
-  // Pixel data
-  const pixBase = offset + imgOff;
-  const pixData = u8.subarray(pixBase, pixBase + imgSize);
-
-  // Determine width/height
-  // NDS tile data is stored in 8×8 tiles
-  // Total pixels = imgSize * (8 or 2) depending on bpp
-  let totalPixels;
-  if (is4bpp) {
-    totalPixels = imgSize * 2; // 2 pixels per byte
+    const nameSize=r.u32();
+    data.name=r.strU16(nameSize);
+    while(r.tell()%4!==0)r.seek(r.tell()+1);
+    const tail=r.u32();
+    if(tail!==labelCount)throw new Error('label index table count mismatch');
+    for(let i=0;i<labelCount;i++){
+      const v=r.u32();
+      if(v!==i+1)throw new Error('label index table value mismatch at '+i);
+    }
+    return {isGs56:true,data};
   } else {
-    totalPixels = imgSize; // 1 pixel per byte
+    const size=r.u32();
+    const cur=r.tell();
+    if(size!==u8.length-cur)throw new Error('data size mismatch');
+    const raw=r.bytes(size);
+    return {isGs56:false,raw};
   }
-
-  // Common NDS sprite dimensions — pick best fit
-  const dims = guessDimensions(totalPixels);
-  const width = dims[0], height = dims[1];
-
-  if (width === 0 || height === 0) {
-    throw new Error(`can't determine dimensions for ${totalPixels} pixels`);
-  }
-
-  // Build RGBA pixel array (untiled: 8×8 tile order)
-  const rgba = new Uint8ClampedArray(width * height * 4);
-  const tileW = 8, tileH = 8;
-  const tilesX = Math.ceil(width / tileW);
-  const tilesY = Math.ceil(height / tileH);
-
-  let byteIdx = 0;
-
-  for (let ty = 0; ty < tilesY; ty++) {
-    for (let tx = 0; tx < tilesX; tx++) {
-      for (let py = 0; py < tileH; py++) {
-        for (let px = 0; px < tileW; px += (is4bpp ? 2 : 1)) {
-          const screenX = tx * tileW + px;
-          const screenY = ty * tileH + py;
-
-          if (is4bpp) {
-            if (byteIdx >= pixData.length) break;
-            const byte = pixData[byteIdx++];
-            const ci0 = byte & 0x0F;
-            const ci1 = (byte >> 4) & 0x0F;
-
-            for (let sub = 0; sub < 2; sub++) {
-              const sx = screenX + sub;
-              if (sx < width && screenY < height) {
-                const pi = (screenY * width + sx) * 4;
-                const ci = sub === 0 ? ci0 : ci1;
-                const col = ci < palette.length ? palette[ci] : [0,0,0];
-                rgba[pi]   = col[0];
-                rgba[pi+1] = col[1];
-                rgba[pi+2] = col[2];
-                rgba[pi+3] = ci === 0 ? 0 : 255; // color 0 = transparent
-              }
-            }
-          } else {
-            if (byteIdx >= pixData.length) break;
-            const ci = pixData[byteIdx++];
-            if (screenX < width && screenY < height) {
-              const pi = (screenY * width + screenX) * 4;
-              const col = ci < palette.length ? palette[ci] : [0,0,0];
-              rgba[pi]   = col[0];
-              rgba[pi+1] = col[1];
-              rgba[pi+2] = col[2];
-              rgba[pi+3] = ci === 0 ? 0 : 255;
-            }
-          }
-        }
-      }
-    }
-  }
-
-  // Render to canvas to get PNG data URL
-  const canvas = document.createElement('canvas');
-  canvas.width = width;
-  canvas.height = height;
-  const ctx = canvas.getContext('2d');
-  const imgDataObj = new ImageData(rgba, width, height);
-  ctx.putImageData(imgDataObj, 0, 0);
-  const dataUrl = canvas.toDataURL('image/png');
-
-  return {
-    name: `img_${String(idx).padStart(4,'0')}`,
-    width, height,
-    bpp: is4bpp ? 4 : 8,
-    numColors,
-    dataUrl,
-    canvas,
-    offset,
-    totalPixels
-  };
 }
 
-function guessDimensions(totalPixels) {
-  // Common NDS sprite/BG sizes (multiples of 8)
-  const preferred = [
-    [256, 192], [256, 256], [192, 256], [512, 192], [192, 512],
-    [128, 128], [64, 64], [32, 32], [16, 16], [8, 8],
-    [64, 32], [32, 64], [128, 64], [64, 128],
-    [256, 128], [128, 256], [512, 256], [256, 512],
-    [32, 16], [16, 32], [24, 24], [48, 48], [96, 96], [160, 160],
-    [128, 96], [96, 128], [80, 80], [40, 40], [72, 72],
-    [320, 240], [512, 384],
-  ];
-
-  for (const [w, h] of preferred) {
-    if (w * h === totalPixels) return [w, h];
+// ── JSON -> USR2 ─────────────────────────────────────
+function encodeUsr2(data){
+  if(typeof data!=='object'||data===null)throw new Error('incorrect JSON structure');
+  if(typeof data.name!=='string')throw new Error('incorrect JSON structure: "name" must be a string');
+  if(!Array.isArray(data.labels))throw new Error('incorrect JSON structure: "labels" must be an array');
+  for(const l of data.labels){
+    if(!Array.isArray(l)||l.length!==2||typeof l[0]!=='string'||typeof l[1]!=='string')
+      throw new Error('incorrect JSON structure: each label must be [string,string]');
   }
 
-  // Try square root
-  const sq = Math.round(Math.sqrt(totalPixels));
-  if (sq * sq === totalPixels && sq % 8 === 0) return [sq, sq];
+  const labels=data.labels;
+  const instanceCount=labels.length+1;
 
-  // Find best rectangular fit (width >= height, both multiples of 8)
-  for (let w = 512; w >= 8; w -= 8) {
-    if (totalPixels % w === 0) {
-      const h = totalPixels / w;
-      if (h >= 8 && h <= 512 && h % 8 === 0) return [w, h];
-    }
+  const w=new Writer();
+  w.write([85,83,82,0]); // USR\0
+  for(let i=0;i<3;i++)w.u32(0); // resource, userdata, info counts
+  for(let i=0;i<3;i++)w.u64(USRHDR_SIZE); // resource, userdata, data offsets
+  w.pad16();
+
+  w.write([82,83,90,0]); // RSZ\0
+  w.u32(16); // version
+  w.u32(1);  // object count
+  w.u32(instanceCount+1);
+  w.u32(0); // userdata count
+  w.u32(0); // reserved
+  w.u64(52); // instance offset
+  const dataOffset=roundUp(52+8*(instanceCount+1),16);
+  w.u64(dataOffset); // data offset
+  w.u64(dataOffset); // userdata offset
+  w.u32(instanceCount); // object table
+  w.u64(0); // null
+
+  for(let i=0;i<instanceCount-1;i++){
+    w.u32(CLASS_GS56[0]);w.u32(CLASS_GS56[1]);
   }
+  w.u32(CLASS_NAME[0]);w.u32(CLASS_NAME[1]);
+  w.pad16();
 
-  // Fallback: just make width = next power of 2
-  let w = 8;
-  while (w * w < totalPixels) w *= 2;
-  const h = Math.ceil(totalPixels / w);
-  if (w > 0 && h > 0) return [w, h];
+  for(const [label,text] of labels){
+    w.u32(label.length+1);
+    w.strU16(label);
+    w.pad4();
+    w.u32(text.length+1);
+    w.strU16(text);
+    w.pad4();
+  }
+  w.u32(data.name.length+1);
+  w.strU16(data.name);
+  w.pad4();
+  w.u32(instanceCount-1);
+  for(let i=0;i<instanceCount-1;i++)w.u32(i+1);
 
-  return [0, 0];
+  return w.toU8();
 }
 
-function addTile(img, idx) {
-  const grid = document.getElementById('image-grid');
-  const tile = document.createElement('div');
-  tile.className = 'tile';
-  tile.dataset.idx = idx;
-  tile.dataset.name = img.name;
-  tile.dataset.dims = `${img.width}×${img.height}`;
+// ── GMD MAPPINGS (reversed for USR2 -> GMD) ─────────
+const DD_MAPPING = {
+  "CNTR":"CENTER","ICON PAD_X":"ICN 2","ICON PAD_L":"ICN 4","ICON PAD_R":"ICN 5",
+  "ICON PAD_CROSS":"ICN 9","ICON PAD_SLIDE":"ICN 8",
+  "E001":"_END_","E003":"w","E004":"JUMP","E005":"c0","E006":"c1","E007":"c2",
+  "E008":"c3","E009":"c4","E020":"REG_SET","E021":"B_REG","E022":"B_RAND",
+  "E023":"p","E024":"pa","E025":"s","E026":"CALL","E027":"pdm","E028":"FLAG_ON",
+  "E029":"FLAG_OFF","E030":"B_FLAG","E031":"SCENE_JUMP","E032":"B_SCE_JUMP",
+  "E033":"CALL_EXTERNAL","E037":"REG_ADD","E040":"WND","E041":"MSG",
+  "E050":"B_FLAGS","E051":"B_FLAGS_SET","E052":"B_SCENE","E053":"MSG_SKIP_INVALID",
+  "E054":"msg_se","E056":"COURT_FILE_BTN_VISIBLE","E057":"OP_TITLE",
+  "E060":"THUMB_ON","E061":"THUMB_OFF","E062":"THUMB_ON_SCREEN","E065":"FILTER_SET",
+  "E066":"FILTER_WAIT","E070":"FADE","E071":"FADE_WAIT","E072":"FADE_BG",
+  "E073":"FADE_BG_WAIT","E074":"FADE_MODEL","E075":"FADE_MODEL_WAIT",
+  "E077":"FADE_KAISOU_OUT","E078":"FADE_KAISOU_NOCAM_OUT","E081":"BGM_CONTEXT",
+  "E082":"BGM_WAIT","E083":"BGM_SWAP","E084":"BGM_FADE_OUT_OF","E085":"BGM_PLAY",
+  "E086":"SE_PLAY","E087":"BGM_STOP","E088":"SE_STOP","E089":"BGM_VOLUME",
+  "E090":"SE_VOLUME","E091":"BGM_FADE_IN","E092":"BGM_FADE_OUT",
+  "E093":"SE_FADE_IN","E094":"SE_FADE_OUT","E097":"SE_WAIT","E098":"SE_KEYOFF",
+  "E099":"SE_VOLUME_OF","E100":"ITEM_ADD","E101":"ITEM_REMOVE",
+  "E102":"ITEM_REMOVE_ALL","E103":"EVIDENCE_GET","E104":"egw",
+  "E105":"EVIDENCE_UPDATE","E106":"ITEM_UPDATE","E107":"B_ITEM","E108":"B_ITEMS",
+  "E109":"B_ITEMS_SET","E110":"FADE_KAISOU_OUT2","E111":"FADE_KAISOU_NOCAM_OUT2",
+  "E113":"BGM_WAIT_OF","E114":"BGM_PLAY_STAFFROLL","E115":"INV_SET_ANOTHER_CUT",
+  "E116":"INV_DETAIL_CAM_SET","E117":"BG_ORNAMENT_FADE_IN",
+  "E118":"BG_ORNAMENT_FADE_OUT","E119":"BG_ORNAMENT_FADE_WAIT","E120":"BG_SET",
+  "E121":"BG_ORNAMENT","E122":"USE_BG_CAMERA_ONLY","E123":"BG_CHANGE",
+  "E124":"SELECT_POTTERY","E125":"CHR_STOP_SE","E127":"CHR_WAIT_ODOROKI",
+  "E128":"CHR_ANIME_NOSTART_ODOROKI","E129":"CHR_ANIME_SPECIAL_ODOROKI",
+  "E130":"CAM_SET","E131":"CAM_WAIT","E132":"CAM_SET_FRAME","E133":"CAM_RESUME",
+  "E134":"CHR_ANIME_ODOROKI","E135":"CHR_POS_SET","E136":"CHR_DEL_2D_OR_3D",
+  "E137":"CHR_SET_2D_OR_3D","E138":"CHR_WAIT_WITHOUT_MOT","E139":"CHR_WAIT_EVENT",
+  "E140":"CHR_SET","E141":"CHR_DEL","E142":"CHR_BST_SET","E143":"CHR_BST_DEL",
+  "E144":"CHR_WAIT","E145":"CHR_ANIME","E146":"CHR_ANIME_SE",
+  "E147":"CHR_ANIME_NOSTART","E148":"CHR_SET_NOSTART","E149":"CHR_BST_SET_NOSTART",
+  "E150":"CHR_FORCE_MOUSE","E152":"CHR_LOAD","E153":"CHR_UNLOAD","E154":"CHR_POS",
+  "E155":"CHR_BST_POS","E156":"CHR_MAT_CHG","E157":"CHR_VISIBLE",
+  "E158":"B_CHR_SET","E159":"CHR_PARTS_DISP","E160":"CHR_ANIME_REP",
+  "E161":"CHR_UNLOAD_ALL","E162":"CHR_SET_CHILD","E163":"CHR_BST_SET_CHILD",
+  "E164":"CHR_ANIME_SPECIAL","E165":"CHR_ANIME_SPECIAL_NO_SE","E166":"GADGET_FADE",
+  "E167":"GADGET_ANIME","E168":"GADGET_COLOR","E169":"CHR_MOUTH","E170":"CHR_ALPHA",
+  "E172":"MNK_UNLOAD","E173":"MNK_LOAD","E174":"MNK_FORCE_START",
+  "E175":"MNK_INDUCTION_DEMO","E176":"MNK_BUTTON","E177":"MNK_LABEL",
+  "E178":"MNK_START","E179":"MNK_MSG_SET","E180":"MNK_MSG","E181":"MNK_CHR_SET",
+  "E183":"mnp","E184":"mn_seg","E185":"mn_ans","E186":"MNK_CLEAR",
+  "E187":"MNK_MSG_INIT","E188":"MNK_START_TUTORIAL",
+  "E189":"MNK_TUTORIAL_CURSOR_WAIT","E190":"BIG_FONT","E191":"BIG_FONT_WAIT",
+  "E192":"MNK_TEXT_START_TUTORIAL","E193":"MARK_CONFALENCE","E194":"MARK_TSTMNY",
+  "E195":"TESTIMONY","E196":"tw","E197":"COURT_IN","E198":"COURT_IN_WAIT",
+  "E201":"NOT_GUILTY","E202":"NOT_GUILTY_WAIT","E205":"EXAMINE","E206":"ew",
+  "E207":"SCENARIO_MODE","E208":"HAMMER_PLAY","E209":"HAMMER_WAIT",
+  "E210":"DEMO_PLAY","E211":"DEMO_WAIT","E212":"pig",
+  "E213":"HAMMER_PLAY_STOP_BGM","E214":"NOW_DATA_SET",
+  "E215":"MNK_TUTORIAL_CONT_LABEL","E216":"PSY_KOKONE_END","E217":"PSY_KOKONE_CLEAR",
+  "E218":"INV_EVI_GOTO","E220":"CHOICE_START","E221":"CHOICE_INIT",
+  "E222":"CHOICE_SET","E223":"CHOICE_JUMP","E224":"THRUST_FORCE",
+  "E225":"B_THRUST_FORCE","E226":"B_THRUST_FORCE_2","E227":"PSY_LOAD",
+  "E228":"PSY_BUTTON","E229":"PSY_LABEL_SET","E230":"PSY_LOCK_BREAK",
+  "E231":"PSY_CLEAR","E232":"PSY_INDUCTION_START","E233":"PSY_INDUCTION_END",
+  "E234":"PSY_END","E235":"PSY_ROCK_SET","E237":"PSY_ROCK_BLACK",
+  "E238":"PSY_FORCE_END","E239":"PSY_START_NO_DEMO","E240":"EXAM_MESS_INIT",
+  "E241":"EXAM_MESS_SET","E242":"EXAM_MESS_END","E243":"EXAM_START",
+  "E244":"EXAM_ANSWER_SET","E245":"EXAM_MESS_NEXT_SET","E246":"PSY_UNLOAD",
+  "E247":"PSY_KOKONE_BREAK_SETUP","E248":"B_EXAM_NEXT_FOLLOW","E249":"B_EXAM_FAILD",
+  "E250":"PSY_THRUST_ANSWER_SET","E252":"STAFFROLL_TIMER",
+  "E253":"STAFFROLL_TIMER_WAIT","E254":"STAFFROLL_2_WAIT",
+  "E255":"B_THRUST_FORCE_NO_KURAE","E256":"PSY_KOKONE_BREAK",
+  "E257":"PSY_KOKONE_BREAK_WAIT","E258":"PLAYER_SET","E259":"PARTNER_SET",
+  "E260":"MSG_EXAM_PARTNER","E261":"PARTNER_OFF",
+  "E266":"PARTNER_EXAM_NEXT_SET","E267":"PARTNER_HINT_LABEL_SET",
+  "E268":"PARTNER_DAMAGE_COUNT_RESET","E270":"STAFFROLL_OPEN",
+  "E271":"STAFFROLL_CLOSE","E272":"STAFFROLL_INIT","E273":"STAFFROLL_END",
+  "E274":"STAFFROLL_2_INIT","E275":"STAFFROLL_2_START","E276":"STAFFROLL_2_END",
+  "E277":"INV_EVIDENCE_START_TUTORIAL","E279":"GAUGE_PREDAMAGE","E280":"GAUGE_IN",
+  "E281":"GAUGE_OUT","E282":"GAUGE_WAIT","E283":"GAUGE_DAMAGE","E284":"B_LIFE_ZERO",
+  "E285":"GAME_OVER","E286":"GAUGE_RESET","E287":"RETRY_ITEM_STORE",
+  "E288":"GAME_OVER_PANEL_ONLY","E289":"INV_USE_2D_CAMERA",
+  "E290":"INV_EVIDENCE_DEMO","E291":"INV_EVIDENCE_FINISH",
+  "E292":"INV_EVIDENCE_INIT","E293":"INV_EVIDENCE_START","E294":"TV_WAIT",
+  "E295":"TV_PO_INIT","E296":"TV_OPEN","E297":"TV_NEXT","E298":"TV_SET",
+  "E299":"TV_CLOSE","E300":"EVENT_SHOW","E301":"EVENT_END","E302":"TEXTCUT_SHOW",
+  "E303":"TEXTCUT_END","E304":"EVENT_FADE_SWAP","E305":"EVENT_FADE_WAIT",
+  "E306":"PO_INIT","E307":"PO_START","E308":"PO_POINT_CLOSE",
+  "E309":"PO_EVENT_CLOSE","E310":"PO_FINISH","E311":"INV_INIT",
+  "E312":"INV_CAM_ADD","E313":"INV_LABEL_SET","E315":"INV_DETAIL_CAM",
+  "E316":"INV_CAM_WAIT","E317":"INV_CAM_RET","E318":"INV_HIT_SET",
+  "E319":"INV_MOT_SET","E320":"INV_MOT_WAIT","E321":"INV_CAM_SET",
+  "E322":"INV_COND_ADD","E324":"INV_OPEN","E326":"INV_EVI_FLAG_SET",
+  "E327":"B_HIT_EVIDENCE","E329":"BG_USE_COLOR","E330":"aya","E331":"dam",
+  "E332":"gek","E333":"hir","E334":"kia","E335":"sho","E336":"dm0","E338":"f",
+  "E339":"f2","E340":"fw","E341":"q0","E342":"q1","E343":"q2","E345":"bak",
+  "E346":"skn","E354":"PARTNER_HINT_ENABLE","E369":"DTC_INIT",
+  "E370":"DTC_INDEX_INIT","E371":"DTC_MODE","E372":"DTC_INDEX_TALK",
+  "E373":"DTC_INDEX_INVEST","E374":"DTC_INDEX_MOVE","E375":"DTC_INDEX_THRUST",
+  "E376":"DTC_TALK_FORCE_IN","E377":"DTC_TALK_SET","E378":"DTC_TALK_UPDATE",
+  "E379":"DTC_THRUST_INIT","E380":"DTC_THRUST_SET","E381":"B_DTC_THRUST",
+  "E382":"DTC_INDEX_INIT_END","E383":"DTC_INV_LABEL","E384":"B_DTC_SETUP",
+  "E385":"DTC_TOPIC_INIT","E386":"DTC_MOVE_SET","E388":"DTC_MOVE_FLAG",
+  "E390":"DTC_END_INIT","E391":"DTC_END_ITEM_SET","E392":"DTC_END_FLAG_SET",
+  "E393":"DTC_START","E394":"B_DTC_END","E397":"INTERVAL",
+  "E398":"KOKORO_RANDOM_NOISE_START","E399":"KOKORO_RANDOM_NOISE_END",
+  "E400":"KOKORO_INIT","E401":"KOKORO_END","E402":"KOKORO_DEMO",
+  "E403":"KOKORO_SET_PHRASE","E404":"KOKORO_UPDATE_EXAM","E405":"KOKORO_UPDATE",
+  "E406":"KOKORO_TUTO_NOISE_START","E407":"KOKORO_TUTO_NOISE_END",
+  "E409":"KOKORO_SET_CAPTION","E410":"KOKORO_EXAM_TESTIMONY_SET_EX",
+  "E411":"KOKORO_UPDATE_DELAY","E412":"KOKORO_WAIT",
+  "E413":"KOKORO_EXAM_TESTIMONY_SET","E414":"KOKORO_EXAM_MESS_SET",
+  "E416":"B_KOKORO_PHRASE","E417":"KOKORO_SAGURU_ADD_HIT_MASK",
+  "E418":"KOKORO_TUKITO_ADD_TESTIMONY_EX","E419":"KOKORO_BGM",
+  "E421":"KOKORO_SAGURU_ADD_TESTIMONY","E422":"KOKORO_SAGURU_ADD_PHRASE",
+  "E423":"KOKORO_NOISE","E425":"KOKORO_SAGURU",
+  "E426":"KOKORO_TUKITO_ADD_TESTIMONY","E427":"KOKORO_TUKITO_ADD_PHRASE",
+  "E428":"KOKORO_TUKITO","E429":"KOKORO_TUKITO_TUTO_PHRASE",
+  "E430":"KOKORO_TUTO_IN","E431":"KOKORO_TUTO_OUT","E432":"KOKORO_TUTO_SET_ICON",
+  "E433":"KOKORO_TUKITO_TUTO_IN","E434":"KOKORO_TUKITO_TUTO_OUT",
+  "E435":"KOKORO_CLEAR_TESTIMONY","E436":"KOKORO_SET_CAM",
+  "E437":"KOKORO_SHUTDOWN","E438":"KOKORO_SHOW","E439":"KOKORO_HIDE",
+  "E440":"EVENT_MOVE","E441":"EVENT_MOVE_WAIT","E442":"EVENT_SHOW_FADE",
+  "E443":"EVENT_END_FADE","E444":"EVENT_SHOW_BACK","E445":"MOVIE_PLAY",
+  "E446":"MOVIE_WAIT","E449":"MEMO_SET_TASK","E450":"MEMO_ALL_REMOVE",
+  "E451":"MEMO_TASK_FINISH","E452":"MEMO_SET_SUMMARY","E453":"EVENT_SHOW_FADE_BACK",
+  "E454":"EVENT_END_FADE_BACK","E455":"MEMO_SET_SUMMARY_P2",
+  "E456":"KOKORO_TUKITO_ADD_TESTIMONY_FLAG","E457":"BB_SMALL_MSG_WAIT",
+  "E458":"BB_SMALL_MSG","E459":"BB_BIG_MSG","E460":"COMBO_THUMB_ON",
+  "E461":"COMBO_THUMB_OFF","E462":"COMBO_GET_KEYWORD","E465":"COMBO_START",
+  "E466":"COMBO_START_RESUME","E467":"COMBO_END","E468":"COMBO_WAIT",
+  "E469":"COMBO_NEXT","E470":"COMBO_EVENT_SHOW","E471":"COMBO_EVENT_END",
+  "E474":"COMBO_KEYWORD_BACK","E476":"COMBO_WAIT_KEYWORD","E477":"COMBO_WAIT_EVENT",
+  "E478":"COMBO_WAIT_THUMB","E480":"COMBO_FAIL","E481":"COMBO_REBIRTH",
+  "E483":"COMBO_WAIT_LINE","E484":"COMBO_BG_SPEED","E485":"COMBO_END_RESUME",
+  "E486":"COMBO_STAR_LEVEL","E487":"COMBO_THUMB_ON_LINE",
+  "E488":"KOKORO_TUKITO_ADD_TESTIMONY_READ","E489":"MOVIE_PLAY_EX",
+  "E511":"COMBO_FAIL_IF","E512":"DTC_MOVE_FLAG_SET","E513":"MOVIE_PLAY_LIMIT",
+  "E514":"BGM_PREPARE_PAUSE","E515":"BGM_PREPARE_RESUME","E750":"PRE_SET_SCENE",
+  "E751":"PRE_SET_ITEM_ADD","E752":"PRE_SET_ITEM_REMOVE",
+  "E753":"PRE_SET_ITEM_REMOVE_ALL","E754":"PRE_SET_FLAG_ON",
+  "E755":"PRE_SET_FLAG_OFF","E756":"PRE_SET_ITEM_UPDATE",
+  "E761":"PRE_SET_DTC_TOPIC_ON","E762":"PRE_SET_DTC_MOVE_FLAG",
+  "E765":"PRE_SET_NOW_DATA_SET","E766":"PRE_SET_MEMO_SET_TASK",
+  "E767":"PRE_SET_MEMO_ALL_REMOVE","E768":"PRE_SET_MEMO_TASK_FINISH",
+  "E769":"PRE_SET_MEMO_SET_SUMMARY","E770":"PRE_SET_MEMO_SET_SUMMARY_P2",
+  "E800":"ROWE"
+};
 
-  const canvas = document.createElement('canvas');
-  canvas.className = 'tile-img';
-  canvas.width = img.width;
-  canvas.height = img.height;
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(img.canvas, 0, 0);
+const SOJ_MAPPING = {
+  "ICON PAD_Y":"ICN 21","ICON PAD_A":"ICN 22","ICON PAD_B":"ICN 23",
+  "E010":"c5","E039":"SCENE_JUMP_NEXT","E063":"WND_CLOSE","E067":"DEMO_UNK1",
+  "E096":"stse_mwn","E171":"GADGET_WAIT","E182":"MNK_DURUKU_FAILD_LABEL",
+  "E219":"INV_EVI_RET","E262":"HAMMER_PLAY_STOP_SOUND","E263":"NOT_GUILTY_CIVIL",
+  "E328":"INV_USE_LUMI","E347":"qa","E353":"skn0","E356":"QUAKE",
+  "E365":"DTC_MODE_NO_BTN_SELECT","E366":"DTC_MODE_NO_INV","E367":"INV_CAM_SET2",
+  "E368":"DTC_MODE_NO_MOVE","E463":"COMBO_LOAD","E464":"COMBO_OUT_PLAYER",
+  "E472":"COMBO_EVENT_THUMB_END","E473":"COMBO_SET_WAY","E475":"COMBO_REBIRTH_SE",
+  "E482":"COMBO_THUMB_CLR","E490":"DTC_TOPIC_FLAG_OFF","E491":"INV_CAM_SET_END",
+  "E492":"INV_POINT_RESET","E493":"INV_EVI_THRUST_START_TUTO",
+  "E494":"CHR_SET_MULTI","E495":"CHR_SET_MULTI_NOSTART","E496":"CHR_SET_SOUHEI",
+  "E516":"KS_ARC_LOAD","E517":"KS_ARC_RELEASE","E518":"KS_BGM",
+  "E519":"KS_SETUP_PHASE","E520":"KS_EXECUTE","E521":"KS_SET_BRANCH",
+  "E522":"MEMO_SET_SUMMARY_CIVIL","E523":"ANIME_PLAY",
+  "E524":"CAM_PLAY_DTC_BG_FADE_DISABLE","E526":"CAM_PLAY","E527":"CAM_SW",
+  "E528":"SPIRIT_SETUP","E529":"SPIRIT_EXECUTE","E530":"SPIRIT_SET_PHASE",
+  "E531":"SPIRIT_FINAL","E532":"SPIRIT_IS_DECIDE","E533":"SPIRIT_SENSE_CHECK",
+  "E535":"SPIRIT_REQ_AST_CHG","E536":"SPIRIT_REQ_AST_INS",
+  "E537":"SPIRIT_AST_CHG_EXE","E539":"ASSERTION_START",
+  "E541":"KS_SETUP_BERSERK_2ND","E543":"SPIRIT_ANSWER_JUMP",
+  "E545":"SPIRIT_START_DEMO","E547":"SPIRIT_DANCE_DEMO",
+  "E548":"SPIRIT_STATIC_IMAGE_IN","E549":"SPIRIT_STATIC_IMAGE_OUT",
+  "E550":"SPIRIT_TUTORIAL","E553":"CAM_ZOOM_IN_POS","E556":"FINGER_INIT",
+  "E557":"FINGER_START","E558":"FINGER_LABEL_SET","E559":"FINGER_SET_OFFSET",
+  "E560":"FINGER_TUTO","E561":"FINGER_COLLATE","E562":"POM_SETUP",
+  "E563":"POM_EXECUTE","E564":"POM_FINAL","E565":"POM_REG_ANSWER",
+  "E566":"POM_CLEAR_ANSWER","E567":"POM_B_CORRECT","E568":"POM_B_HIT_ID",
+  "E570":"BOX_SETUP","E571":"BOX_EXECUTE","E572":"BOX_FINAL",
+  "E573":"BOX_B_SUCCESS","E574":"BOX_B_FAILURE","E575":"BOX_OPEN",
+  "E576":"CAM_ZOOM_IN_OFFS","E579":"INV_EVI_THRUST_START","E580":"INV_EVI_MOT_PLAY",
+  "E581":"INV_EVI_COLLISION","E582":"INV_EVI_MOT_SET","E583":"FINGER_ARROW",
+  "E585":"DELTA_TIME_SET","E587":"SPIRIT_B_FAIL_TYPE","E588":"CHR_TAG_WAIT",
+  "E589":"SDL_EV_ID_WAIT","E590":"EFC_LINE_SET","E591":"EFC_LINE_END",
+  "E592":"SPIRIT_CHANGE_EXIT","E595":"NOT_GUILTY_ANIM","E598":"CAM_ZOOM_REVERSE",
+  "E599":"CAM_PLAY_LOOK_UP","E609":"BGM_PLAY_VOLUME","E611":"BGM_VOLUME_OF",
+  "E612":"STRM_PLAY","E613":"STRM_STOP","E614":"STRM_FADE_IN",
+  "E615":"STRM_FADE_OUT","E616":"STRM_WAIT_OF","E617":"STRM_WAIT",
+  "E619":"STRM_VOLUME_OF","E620":"STRM_PLAY_NC","E621":"STRM_FADE_OUT_OF",
+  "E638":"dog_se","E641":"SE_CAM_VOL_MIN_SET","E642":"SE_CAM_FO_FORCE",
+  "E646":"SE_FADE_OUT_WAIT","E661":"RELIC_DEMO_FINAL","E662":"SCE00_OP_DEMO",
+  "E663":"SCE00_OP_DEMO_WAIT","E664":"KS_TUTORIAL","E665":"KS_SET_THROUGH",
+  "E675":"RESET_LAYOUT_CAM","E676":"WALLPAPER_SET","E678":"PHOTO_FACE_SET",
+  "E771":"PRE_SET_PLAYER_SET","E772":"PRE_SET_SCENARIO_MODE",
+  "E773":"PRE_SET_MEMO_SET_SUMMARY_CIVIL","E795":"MSGS","E796":"MSGE"
+};
 
-  const sel = document.createElement('div');
-  sel.className = 'tile-sel';
-  sel.textContent = '✓';
+const SOJ_OVERWRITE = {
+  "E525":"CAM_WAIT","E600":"BGM_CONTEXT","E601":"BGM_WAIT","E602":"BGM_SWAP",
+  "E603":"BGM_FADE_OUT_OF","E604":"BGM_PLAY","E605":"BGM_STOP",
+  "E606":"BGM_FADE_IN","E607":"BGM_FADE_OUT","E608":"BGM_VOLUME",
+  "E610":"BGM_WAIT_OF","E630":"SE_PLAY","E631":"SE_STOP","E632":"SE_VOLUME",
+  "E633":"SE_WAIT","E634":"SE_FADE_IN","E635":"SE_FADE_OUT","E639":"SE_VOLUME_OF",
+  "E081":"bgm_mw","E082":"BOKEH_FILTER_ON","E083":"BOKEH_FILTER_OFF",
+  "E084":"BOKEH_FILTER_WAIT","E085":"stse_mw","E086":"WND_OPEN_QUICK",
+  "E087":"WND_CLOSE_QUICK","E088":"FADE_SCENE","E090":"FADE_KAISOU_START_IN",
+  "E091":"FADE_KAISOU_NOCAM_START","E093":"FADE_KAISOU_END_IN",
+  "E094":"FADE_KAISOU_NOCAM_END","E097":"FADE_KAISOU_EVENT_START",
+  "E098":"FADE_KAISOU_EVENT_END","E114":"INV_REGION_SET",
+  "E122":"BG_ORNAMENT_MTR_ANM","E127":"BOW","E129":"BG_ORNAMENT_ALPHA",
+  "E130":"SET_CAM_FAR","E142":"CHR_SET_AND_REMOVAL","E143":"CHR_WAIT_LINK",
+  "E148":"CHR_ANIME_NSS","E149":"CHR_SET_NOSTART","E150":"CHR_FORCE_MOUTH",
+  "E159":"CHR_LOOP_WAIT","E162":"CHR_LEAVE","E163":"CHR_ANIME_NO_SE",
+  "E193":"MARK","E194":"CHR_SET_VOFF","E259":"PO_ANSWER_SET","E261":"DEMO_DEL",
+  "E268":"INV_CAM_RET_FORCE","E515":"CAM_RETURN_DEFAULT"
+};
 
-  const name = document.createElement('div');
-  name.className = 'tile-name';
-  name.textContent = img.name + '.png';
+// build forward mapping (GMD-internal-code -> readable-tag), then invert
+function buildForwardMapping(isSOJ) {
+  if(isSOJ) return {...DD_MAPPING,...SOJ_MAPPING,...SOJ_OVERWRITE};
+  return {...DD_MAPPING,...SOJ_MAPPING};
+}
+// inverted: readable-tag -> GMD-internal-code, for re-encoding back to GMD form
+function buildReverseMapping(isSOJ){
+  const fwd=buildForwardMapping(isSOJ);
+  const rev={};
+  for(const [code,tag] of Object.entries(fwd))rev[tag]=code;
+  return rev;
+}
 
-  const dim = document.createElement('div');
-  dim.className = 'tile-dim';
-  dim.textContent = `${img.width}×${img.height} · ${img.bpp}bpp`;
+const NO_PREFIX_TAGS = new Set(["CENTER","ICN","PAGE"]);
+const NO_COMMA_TAGS = new Set(["ICN ","ICN 0","ICN 2","ICN 4","ICN 5","ICN 6","ICN 7","ICN 8","ICN 9","ICN 10","ICN 11","ICN 12","ICN 13","ICN 14","ICN 15","ICN 16","ICN 19","ICN 20","ICN 21","ICN 22","ICN 23"]);
 
-  tile.appendChild(canvas);
-  tile.appendChild(sel);
-  tile.appendChild(name);
-  tile.appendChild(dim);
-
-  tile.addEventListener('click', (e) => {
-    if (e.shiftKey || e.ctrlKey || e.metaKey) {
-      tile.classList.toggle('selected');
-      updateSelZip();
-    } else {
-      openLightbox(idx);
-    }
+// ── REVERSE TAG TRANSFORM: USR2/JSON text form -> GMD text form ──
+// Undo addPrefixAndCommas: strip "XXXX " prefix and convert commas back to spaces inside tags
+function stripPrefixAndCommas(line){
+  // remove "XXXX " prefix added before tag names
+  line = line.replace(/<XXXX\s+(\w+)/g, '<$1');
+  // convert commas back to spaces inside tag brackets
+  line = line.replace(/<([^>]+)>/g, (match, inner) => {
+    return '<' + inner.replace(/,/g,' ') + '>';
   });
-
-  grid.appendChild(tile);
+  return line;
 }
 
-function openLightbox(idx) {
-  lbIdx = idx;
-  const img = images[idx];
-  const canvas = document.getElementById('lb-canvas');
-  canvas.width = img.width;
-  canvas.height = img.height;
-  const ctx = canvas.getContext('2d');
-  ctx.drawImage(img.canvas, 0, 0);
-
-  document.getElementById('lb-meta').innerHTML = `
-    <div>name</div><div><span>${img.name}.png</span></div>
-    <div>size</div><div><span>${img.width} × ${img.height}</span></div>
-    <div>depth</div><div><span>${img.bpp}bpp</span></div>
-    <div>colors</div><div><span>${img.numColors}</span></div>
-    <div>pixels</div><div><span>${img.totalPixels.toLocaleString()}</span></div>
-    <div>offset</div><div><span>0x${img.offset.toString(16).toUpperCase()}</span></div>
-  `;
-  document.getElementById('lightbox').classList.add('open');
+// Reverse applyTagMapping: convert readable tags back to internal GMD codes (E0xx etc)
+function reverseTagMapping(line, reverseMap){
+  for(const [tag, code] of Object.entries(reverseMap)) {
+    const esc = tag.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
+    line = line.replace(new RegExp('<'+esc, 'g'), '<'+code);
+  }
+  return line;
 }
 
-function closeLightbox() {
-  document.getElementById('lightbox').classList.remove('open');
+// re-add <SEC_END> markers that were stripped during the original conversion
+function restoreSecEnd(text){
+  // The original tool appended '<SEC_END>' to each label's content during gmdToText,
+  // then later stripped it during convertToJson via REMOVE_TAGS.
+  // We re-append it at the end of each label's text.
+  return text + '<SEC_END>';
 }
 
-document.getElementById('lightbox').addEventListener('click', function(e) {
-  if (e.target === this) closeLightbox();
+// ── HASHING (for V2 label offset table) ─────────────
+const CRC32T=(()=>{const t=new Uint32Array(256);for(let i=0;i<256;i++){let c=i;for(let j=0;j<8;j++)c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1);t[i]=c;}return t;})();
+function crc32(s){const e=new TextEncoder().encode(s);let c=0xFFFFFFFF;for(const b of e)c=CRC32T[(c^b)&0xFF]^(c>>>8);return(c^0xFFFFFFFF)>>>0;}
+function calcHash(label){return[(~crc32(label+label))>>>0,(~crc32(label+label+label))>>>0];}
+
+// ── XOR (V1 / GS5 encryption) ────────────────────────
+function xorCipher(data,ver=1){
+  const k1=ver===1?"fjfajfahajra;tira9tgujagjjgajgoa":"e43bcc7fcab+a6c4ed22fcd433/9d2e6cb053fa462-463f3a446b19";
+  const k2=ver===1?"mva;eignhpe/dfkfjgp295jtugkpejfu":"861f1dca05a0;9ddd5261e5dcc@6b438e6c.8ba7d71c*4fd11f3af1";
+  const out=new Uint8Array(data.length);
+  for(let i=0;i<data.length;i++)out[i]=data[i]^k1.charCodeAt(i%k1.length)^k2.charCodeAt(i%k2.length);
+  return out;
+}
+
+const VER_TO={1:66049,2:66306};
+const LANG_TO={Japanese:0,English:1,French:2,Spanish:3,German:4,Italian:5};
+function replaceFullwidth(s){return s.replace(/[\uFF00-\uFFEF]/g,'###');}
+
+// ── JSON (USR2) -> GMD binary ────────────────────────
+// jsonData: {name, labels: [[label,text],...]}
+// targetVer: 1 (GS5) or 2 (GS6)
+function jsonToGmd(jsonData, targetVer, isLE=true){
+  const isSOJ = (targetVer===2);
+  const reverseMap = buildReverseMapping(isSOJ);
+
+  const labelNames=[];
+  let contentBytes=new Uint8Array(0);
+  const enc=new TextEncoder();
+  const labelTextsForPreview=[];
+
+  for(const [label, text] of jsonData.labels){
+    labelNames.push(label);
+    // text comes in as USR2/JSON form (with \r\n line endings, XXXX-prefixed, comma-separated tags)
+    let lines = text.split(/\r\n|\n/);
+    let out = [];
+    for(let l of lines){
+      l = stripPrefixAndCommas(l);
+      l = reverseTagMapping(l, reverseMap);
+      out.push(l);
+    }
+    let restored = out.join('\r\n');
+    restored = restoreSecEnd(restored);
+    labelTextsForPreview.push(restored);
+
+    // GMD format: SEC_END marker becomes \x00, \r\n stays as-is in bytes (encoded as written)
+    const fixed = restored.replace(/<SEC_END>/g,'\x00');
+    const bytes = enc.encode(fixed);
+    const merged = new Uint8Array(contentBytes.length+bytes.length);
+    merged.set(contentBytes);merged.set(bytes,contentBytes.length);
+    contentBytes = merged;
+  }
+
+  const labelCount = labelNames.length;
+  const sectionCount = labelCount;
+  const filename = jsonData.name || '';
+  const language = 'English';
+  const langInt = LANG_TO[language]??1;
+  const versionInt = VER_TO[targetVer]||targetVer;
+  const xorEncoding = (targetVer===1);
+
+  const labelStr = labelNames.join('\x00')+'\x00';
+  const labelSizeCalc = labelCount<1?0:replaceFullwidth(labelStr).length;
+  const sectionSizeCalc = contentBytes.length;
+
+  const w=new Writer();
+  w.write([71,77,68,0]);
+  w.u32(versionInt,isLE);w.u32(langInt,isLE);w.u32(0,isLE);w.u32(0,isLE);
+  w.u32(labelCount,isLE);w.u32(sectionCount,isLE);
+  w.u32(labelSizeCalc,isLE);w.u32(sectionSizeCalc,isLE);w.u32(filename.length,isLE);
+  w.str(filename);w.u8(0);
+
+  // Compute content offsets (running byte position within content) for each label
+  let runningOffset=0;
+  const contentOffsets=[];
+  for(const [label,text] of jsonData.labels){
+    contentOffsets.push(runningOffset);
+    let lines = text.split(/\r\n|\n/);
+    let out=[];
+    for(let l of lines){
+      l=stripPrefixAndCommas(l);
+      l=reverseTagMapping(l, reverseMap);
+      out.push(l);
+    }
+    let restored=out.join('\r\n');
+    restored=restoreSecEnd(restored);
+    const fixed=restored.replace(/<SEC_END>/g,'\x00');
+    runningOffset += enc.encode(fixed).length;
+  }
+
+  if(targetVer===1){
+    for(let i=0;i<labelCount;i++){
+      w.u32(i,isLE); // index
+      w.u32(contentOffsets[i]>>>0,isLE); // offset
+    }
+  } else {
+    // version 2: index + hash1 + hash2, plus ref1/ref2, then 1024-byte hash table
+    const offsets=[];
+    for(let i=0;i<labelCount;i++){
+      const [h1,h2]=calcHash(labelNames[i]);
+      offsets.push([h1,h2]);
+    }
+    let curPos=0;
+    const labelPosMap={};
+    for(const n of labelNames){const[h1,h2]=calcHash(n);labelPosMap[curPos]=[h1,h2];curPos+=replaceFullwidth(n).length+1;}
+    for(let i=0;i<labelCount;i++){
+      const[h1,h2]=offsets[i];
+      let ref2=0;
+      for(const[pos,[ph1,ph2]] of Object.entries(labelPosMap)){
+        if(ph1===h1||ph2===h2){ref2=parseInt(pos);break;}
+      }
+      w.u32(i,isLE);
+      w.u32(h1>>>0,isLE);
+      w.u32(h2>>>0,isLE);
+      w.u32(ref2>>>0,isLE);
+      w.u32(0,isLE); // ref1 (best-effort, unused on roundtrip)
+    }
+    // 1024-byte hash table
+    const hashBuf=new Uint8Array(1024);const hv=new DataView(hashBuf.buffer);
+    let pos=0;
+    for(let i=0;i<labelCount;i++){
+      const [h1,h2]=offsets[i];
+      if(pos+8<=1024){hv.setUint32(pos,h1>>>0,isLE);hv.setUint32(pos+4,h2>>>0,isLE);}
+      pos+=8;
+    }
+    w.write(hashBuf);
+  }
+
+  for(const n of labelNames){w.str(n);w.u8(0);}
+  w.write(xorEncoding?xorCipher(contentBytes,1):contentBytes);
+
+  // Build a human-readable preview of the GMD text form
+  const previewLines=[];
+  previewLines.push(`{${filename}}`);
+  previewLines.push(`{GMD V${targetVer}}`);
+  previewLines.push(`{${language}}`);
+  previewLines.push(`{${labelCount}}`);
+  previewLines.push(`{${sectionCount}}`);
+  previewLines.push('');
+  for(let i=0;i<labelCount;i++){
+    const off = targetVer===1 ? String(contentOffsets[i]) : `${contentOffsets[i]}+0`;
+    previewLines.push(`{${i}:${off}:${labelNames[i]}}`);
+    previewLines.push(labelTextsForPreview[i]);
+    if(i!==labelCount-1)previewLines.push('');
+  }
+
+  return {bytes:w.toU8(), preview:previewLines.join('\n'), labelNames, labelTexts:labelTextsForPreview};
+}
+
+// extend Writer with str()
+Writer.prototype.str=function(s){this.write(new TextEncoder().encode(s));};
+
+// ── PREVIEW RENDERER ─────────────────────────────────
+let previewData = null;
+
+function renderPreview(labelNames, labelTexts, rawPreviewText) {
+  previewData = {labelNames, labelTexts, rawPreviewText};
+
+  const labelsEl = document.getElementById('preview-labels');
+  if(!labelNames.length){
+    labelsEl.innerHTML='<div class="empty-note">No labels found.</div>';
+  } else {
+    labelsEl.innerHTML = `
+      <div class="search-bar">
+        <input type="text" id="preview-search" placeholder="Filter by label name or content…" oninput="filterPreview()">
+      </div>
+      <div class="preview-stats" id="preview-stats">${labelNames.length} labels</div>
+      <div class="label-list" id="preview-list"></div>
+    `;
+    renderLabelList(labelNames, labelTexts, '');
+  }
+
+  const rawEl = document.getElementById('preview-raw');
+  rawEl.innerHTML = `<div class="raw-view">${escapeHtml(rawPreviewText)}</div>`;
+}
+
+function renderLabelList(labelNames, labelTexts, filter) {
+  const list = document.getElementById('preview-list');
+  const stats = document.getElementById('preview-stats');
+  if(!list) return;
+  const q = filter.toLowerCase();
+  const items=labelNames.map((name,i)=>[name,labelTexts[i]]);
+  const filtered = items.filter(([name, text]) =>
+    !q || name.toLowerCase().includes(q) || text.toLowerCase().includes(q)
+  );
+  stats.textContent = filter ? `${filtered.length} of ${items.length} labels` : `${items.length} labels`;
+  list.innerHTML = filtered.map(([name, text], i) => {
+    const hasText = text.trim().length > 0;
+    return `<div class="label-item">
+      <div class="label-hdr" onclick="toggleLabel(this)">
+        <span class="label-idx">#${i}</span>
+        <span class="label-name">${escapeHtml(name)}</span>
+        ${hasText?'<span class="label-caret">&#9658;</span>':'<span class="label-caret" style="opacity:.3">&#9658;</span>'}
+      </div>
+      ${hasText?`<div class="label-body">${escapeHtml(text)}</div>`:''}
+    </div>`;
+  }).join('');
+}
+
+function toggleLabel(hdr) {
+  const body = hdr.nextElementSibling;
+  if(!body) return;
+  const caret = hdr.querySelector('.label-caret');
+  const open = body.classList.toggle('open');
+  if(caret) caret.classList.toggle('open', open);
+}
+
+function filterPreview() {
+  const q = document.getElementById('preview-search').value;
+  if(previewData) renderLabelList(previewData.labelNames, previewData.labelTexts, q);
+}
+
+function escapeHtml(s) {
+  return s.replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+}
+
+// ── STATE ─────────────────────────────────────────────
+let decFileData=null,decFileName='',decOutName='';
+let encFileText=null,encFileName='',encOutBytes=null,encOutName='';
+let gmdFileData=null,gmdFileName='',gmdOutBytes=null,gmdOutName='';
+
+// ── DECODE: USR2 -> JSON ───────────────────────────────
+setupDrop('drop-decode','dec-file-input',async f=>{
+  decFileName=f.name;
+  document.getElementById('dec-drop-text').textContent=f.name;
+  document.getElementById('dec-out-card').style.display='none';
+  document.getElementById('dec-status').style.display='none';
+  document.getElementById('dec-ver-badge').textContent='';
+  const buf=await readArrayBuffer(f);
+  decFileData=new Uint8Array(buf);
+  const det=detectUsr2(decFileData);
+  if(det.ok){
+    const kind=det.isGs56?'GS56 (labelled script, V2 JSON)':'GS4 (raw binary blob)';
+    document.getElementById('dec-ver-badge').textContent=det.isGs56?'GS56':'GS4';
+    setStatus('dec-status',`Auto-detected ${kind} · ${formatBytes(f.size)}`,'ok');
+    setMeta('dec-meta',[['Format',det.isGs56?'GS56':'GS4'],['Instances',String(det.instanceCount)],['File',f.name],['Size',formatBytes(f.size)]]);
+  } else {
+    document.getElementById('dec-ver-badge').textContent='?';
+    setStatus('dec-status','Could not auto-detect: '+det.error,'warn');
+    setMeta('dec-meta',[['File',f.name],['Size',formatBytes(f.size)],['Format','?']]);
+  }
+  document.getElementById('btn-decode').disabled=false;
 });
 
-function downloadCurrent() {
-  if (lbIdx < 0) return;
-  const img = images[lbIdx];
-  const a = document.createElement('a');
-  a.href = img.dataUrl;
-  a.download = img.name + '.png';
-  a.click();
+async function runDecode(){
+  if(!decFileData){setStatus('dec-status','No file loaded','err');return;}
+  setStatus('dec-status','Decoding…','');
+  try{
+    const res=decodeUsr2(decFileData);
+    let jsonStr;
+    if(res.isGs56){
+      jsonStr=JSON.stringify(res.data,null,2)+'\n';
+      decOutName=baseName(decFileName)+'.json';
+      document.getElementById('dec-preview').value=jsonStr;
+      document.getElementById('dec-dl-meta').textContent=decOutName+' · '+formatBytes(new Blob([jsonStr]).size);
+      document.getElementById('dec-out-card').style.display='';
+      setStatus('dec-status',`Decoded · GS56 · ${res.data.labels.length} labels`,'ok');
+    } else {
+      // GS4: raw binary blob, not JSON — show a note and offer raw download
+      decOutName=baseName(decFileName)+'.bin';
+      document.getElementById('dec-preview').value='[GS4 binary blob — '+formatBytes(res.raw.length)+', not JSON. Download as .bin instead.]';
+      document.getElementById('dec-out-card').style.display='';
+      decFileData=res.raw; // for download
+      document.getElementById('dec-dl-meta').textContent=decOutName+' · '+formatBytes(res.raw.length)+' (raw binary)';
+      setStatus('dec-status','Decoded · GS4 raw binary (no labels) · downloads as .bin','warn');
+    }
+  }catch(e){setStatus('dec-status','Error: '+e.message,'err');}
 }
 
-async function downloadZip() {
-  const btn = document.getElementById('btn-zip');
-  btn.disabled = true;
-  btn.textContent = 'packing…';
-  await buildZip(images);
-  btn.disabled = false;
-  btn.textContent = '↓ download all as .zip';
-}
-
-async function downloadSelected() {
-  const selected = [...document.querySelectorAll('.tile.selected')]
-    .map(t => images[parseInt(t.dataset.idx)]);
-  if (!selected.length) return;
-  await buildZip(selected);
-}
-
-async function buildZip(imgs) {
-  const zip = new JSZip();
-  for (const img of imgs) {
-    const dataUrl = img.dataUrl;
-    const base64 = dataUrl.split(',')[1];
-    zip.file(img.name + '.png', base64, { base64: true });
+function dlDecoded(){
+  const text=document.getElementById('dec-preview').value;
+  if(text.startsWith('[GS4 binary blob')){
+    dlBlob(new Blob([decFileData],{type:'application/octet-stream'}),decOutName||'output.bin');
+  } else {
+    dlBlob(new Blob([text],{type:'application/json'}),decOutName||'decoded.json');
   }
-  const blob = await zip.generateAsync({ type: 'blob' });
-  const url = URL.createObjectURL(blob);
-  const a = document.createElement('a');
-  a.href = url;
-  a.download = 'cpac2d_extracted.zip';
-  a.click();
-  URL.revokeObjectURL(url);
 }
 
-function selectAll() {
-  document.querySelectorAll('.tile').forEach(t => t.classList.add('selected'));
-  updateSelZip();
+// ── ENCODE: JSON -> USR2 ────────────────────────────────
+setupDrop('drop-encode','enc-file-input',async f=>{
+  encFileName=f.name;
+  document.getElementById('enc-drop-text').textContent=f.name;
+  document.getElementById('enc-out-card').style.display='none';
+  document.getElementById('enc-status').style.display='none';
+  encFileText=await readText(f);
+  setStatus('enc-status','Loaded '+f.name+' · '+formatBytes(f.size),'ok');
+  document.getElementById('btn-encode').disabled=false;
+});
+
+async function runEncode(){
+  if(!encFileText){setStatus('enc-status','No file loaded','err');return;}
+  setStatus('enc-status','Encoding…','');
+  try{
+    const data=JSON.parse(encFileText);
+    encOutBytes=encodeUsr2(data);
+    encOutName=baseName(encFileName)+'.user.2.en';
+    document.getElementById('enc-dl-meta').textContent=encOutName+' · '+formatBytes(encOutBytes.length);
+    document.getElementById('enc-out-card').style.display='';
+    setStatus('enc-status',`Encoded · ${data.labels.length} labels → ${encOutName}`,'ok');
+  }catch(e){setStatus('enc-status','Error: '+e.message,'err');}
 }
 
-function selectNone() {
-  document.querySelectorAll('.tile').forEach(t => t.classList.remove('selected'));
-  updateSelZip();
+function dlEncoded(){
+  if(!encOutBytes)return;
+  dlBlob(new Blob([encOutBytes],{type:'application/octet-stream'}),encOutName||'output.user.2.en');
 }
 
-function updateSelZip() {
-  const n = document.querySelectorAll('.tile.selected').length;
-  const btn = document.getElementById('btn-sel-zip');
-  btn.disabled = n === 0;
-  btn.textContent = n > 0 ? `↓ download ${n} selected` : '↓ download selected';
+// ── USR2 -> GMD ──────────────────────────────────────────
+setupDrop('drop-gmd','gmd-file-input',async f=>{
+  gmdFileName=f.name;
+  document.getElementById('gmd-drop-text').textContent=f.name;
+  document.getElementById('gmd-out-card').style.display='none';
+  document.getElementById('gmd-status').style.display='none';
+  document.getElementById('gmd-ver-badge').textContent='';
+  const buf=await readArrayBuffer(f);
+  gmdFileData=new Uint8Array(buf);
+  const det=detectUsr2(gmdFileData);
+  if(det.ok && det.isGs56){
+    document.getElementById('gmd-ver-badge').textContent='GS56';
+    setMeta('gmd-meta',[['Format','GS56'],['Instances',String(det.instanceCount)],['File',f.name],['Size',formatBytes(f.size)]]);
+    setStatus('gmd-status',`Auto-detected GS56 · ${formatBytes(f.size)}`,'ok');
+    document.getElementById('btn-gmd').disabled=false;
+  } else if(det.ok && !det.isGs56){
+    document.getElementById('gmd-ver-badge').textContent='GS4';
+    setMeta('gmd-meta',[['Format','GS4 (no labels)'],['File',f.name],['Size',formatBytes(f.size)]]);
+    setStatus('gmd-status','GS4 files contain no script labels and cannot be converted to GMD','err');
+    document.getElementById('btn-gmd').disabled=true;
+  } else {
+    document.getElementById('gmd-ver-badge').textContent='?';
+    setMeta('gmd-meta',[['File',f.name],['Size',formatBytes(f.size)],['Format','?']]);
+    setStatus('gmd-status','Could not auto-detect: '+det.error,'err');
+    document.getElementById('btn-gmd').disabled=true;
+  }
+});
+
+async function runGmd(){
+  if(!gmdFileData){setStatus('gmd-status','No file loaded','err');return;}
+  setStatus('gmd-status','Stage 1/2: Decoding USR2…','');
+  try{
+    const res=decodeUsr2(gmdFileData);
+    if(!res.isGs56)throw new Error('GS4 files contain no script labels');
+
+    setStatus('gmd-status','Stage 2/2: Encoding GMD V'+gmdTargetVer+'…','');
+    const result=jsonToGmd(res.data, gmdTargetVer, true);
+    gmdOutBytes=result.bytes;
+    gmdOutName=baseName(gmdFileName)+'.gmd';
+    document.getElementById('gmd-dl-meta').textContent=gmdOutName+' · '+formatBytes(gmdOutBytes.length)+(gmdTargetVer===1?' · XOR encrypted':'');
+    document.getElementById('gmd-out-card').style.display='';
+    setStatus('gmd-status',`Done · ${res.data.labels.length} labels · GMD V${gmdTargetVer} → ${gmdOutName}`,'ok');
+
+    renderPreview(result.labelNames, result.labelTexts, result.preview);
+  }catch(e){setStatus('gmd-status','Error: '+e.message,'err');console.error(e);}
 }
 
-function filterGrid() {
-  const q = document.getElementById('search').value.toLowerCase();
-  document.querySelectorAll('.tile').forEach(t => {
-    const match = t.dataset.name.includes(q) || t.dataset.dims.includes(q);
-    t.style.display = match ? '' : 'none';
-  });
-}
-
-function resetTool() {
-  document.getElementById('result-zone').classList.add('hidden');
-  document.getElementById('upload-zone').classList.remove('hidden');
-  document.getElementById('image-grid').innerHTML = '';
-  document.getElementById('log').innerHTML = '';
-  document.getElementById('file-input').value = '';
-  images.length = 0;
-  document.getElementById('progress-bar').style.width = '0%';
-  document.getElementById('prog-wrap').classList.add('hidden');
+function dlGmd(){
+  if(!gmdOutBytes)return;
+  dlBlob(new Blob([gmdOutBytes],{type:'application/octet-stream'}),gmdOutName||'output.gmd');
 }
 </script>
 </body>
