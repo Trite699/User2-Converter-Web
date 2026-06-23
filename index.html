@@ -106,16 +106,16 @@ h1{font-size:22px;font-weight:500;margin-bottom:4px;}
 </head>
 <body>
 <div class="wrap">
-  <h1>USR2 Script Converter</h1>
-  <p class="sub">RE Engine USR2 (GS4/GS56) script container ↔ JSON ↔ GMD · Auto-detects format</p>
+  <h1>USER2 Script Converter</h1>
+  <p class="sub">RE Engine USER2 (GS4/GS56) script container ↔ JSON ↔ GMD · Auto-detects format</p>
 
   <div class="tabs">
-    <button class="tab-btn active" onclick="switchTab('decode')">USR2 → JSON</button>
-    <button class="tab-btn" onclick="switchTab('encode')">JSON → USR2</button>
-    <button class="tab-btn" onclick="switchTab('gmd')">USR2 → GMD</button>
+    <button class="tab-btn active" onclick="switchTab('decode')">USER2 → JSON</button>
+    <button class="tab-btn" onclick="switchTab('encode')">JSON → USER2</button>
+    <button class="tab-btn" onclick="switchTab('gmd')">USER2 → GMD</button>
   </div>
 
-  <!-- DECODE: USR2 -> JSON -->
+  <!-- DECODE: USER2 -> JSON -->
   <div id="tab-decode" class="tab-panel active">
     <div class="card">
       <div class="card-title">
@@ -125,7 +125,7 @@ h1{font-size:22px;font-weight:500;margin-bottom:4px;}
       <label class="drop" id="drop-decode">
         <div class="drop-icon"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
         <span class="drop-label" id="dec-drop-text">Click or drop a .user.2.en file</span>
-        <span class="drop-hint">USR / RSZ container — GS4 or GS56, auto-detected</span>
+        <span class="drop-hint">USER / RSZ container — GS4 or GS56, auto-detected</span>
         <input type="file" id="dec-file-input" accept=".en,.bin,.user2,*">
       </label>
       <div class="meta-grid" id="dec-meta" style="display:none"></div>
@@ -181,7 +181,7 @@ h1{font-size:22px;font-weight:500;margin-bottom:4px;}
     </div>
   </div>
 
-  <!-- USR2 -> GMD -->
+  <!-- USER2 -> GMD -->
   <div id="tab-gmd" class="tab-panel">
     <div class="card">
       <div class="card-title">
@@ -191,7 +191,7 @@ h1{font-size:22px;font-weight:500;margin-bottom:4px;}
       <label class="drop" id="drop-gmd">
         <div class="drop-icon"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
         <span class="drop-label" id="gmd-drop-text">Click or drop a .user.2.en file</span>
-        <span class="drop-hint">USR / RSZ container with GS56 labels</span>
+        <span class="drop-hint">USER / RSZ container with GS56 labels</span>
         <input type="file" id="gmd-file-input" accept=".en,.bin,.user2,*">
       </label>
       <div class="meta-grid" id="gmd-meta" style="display:none"></div>
@@ -207,9 +207,9 @@ h1{font-size:22px;font-weight:500;margin-bottom:4px;}
     </div>
 
     <div class="card">
-      <div class="card-title">Pipeline <span class="card-title-right">USR2 → JSON → GMD-text → .gmd binary</span></div>
+      <div class="card-title">Pipeline <span class="card-title-right">USER2 → JSON → GMD-text → .gmd binary</span></div>
       <div class="btn-row">
-        <button class="btn btn-primary" id="btn-gmd" disabled onclick="runGmd()">Convert USR2 → .gmd</button>
+        <button class="btn btn-primary" id="btn-gmd" disabled onclick="runGmd()">Convert USER2 → .gmd</button>
       </div>
       <div class="status" id="gmd-status" style="display:none"><span class="dot"></span><span id="gmd-status-text"></span></div>
     </div>
@@ -420,7 +420,7 @@ if(r.tell()!==USRHDR_SIZE)return{ok:false,error:'Header size mismatch'};
   return{ok:true,isGs56,instanceCount,dataOffset:USRHDR_SIZE+dataOffset};
 }
 
-// ── USR2 -> JSON ─────────────────────────────────────
+// ── USER2 -> JSON ─────────────────────────────────────
 function decodeUsr2(u8){
   const det=detectUsr2(u8);
   if(!det.ok)throw new Error(det.error);
@@ -459,7 +459,7 @@ function decodeUsr2(u8){
   }
 }
 
-// ── JSON -> USR2 ─────────────────────────────────────
+// ── JSON -> USER2 ─────────────────────────────────────
 function encodeUsr2(data){
   if(typeof data!=='object'||data===null)throw new Error('incorrect JSON structure');
   if(typeof data.name!=='string')throw new Error('incorrect JSON structure: "name" must be a string');
@@ -473,7 +473,7 @@ function encodeUsr2(data){
   const instanceCount=labels.length+1;
 
   const w=new Writer();
-  w.write([85,83,82,0]); // USR\0
+  w.write([85,83,82,0]); // USER\0
   for(let i=0;i<3;i++)w.u32(0); // resource, userdata, info counts
   for(let i=0;i<3;i++)w.u64(USRHDR_SIZE); // resource, userdata, data offsets
   w.pad16();
@@ -514,7 +514,7 @@ function encodeUsr2(data){
   return w.toU8();
 }
 
-// ── GMD MAPPINGS (reversed for USR2 -> GMD) ─────────
+// ── GMD MAPPINGS (reversed for USER2 -> GMD) ─────────
 const DD_MAPPING = {
   "CNTR":"CENTER","ICON PAD_X":"ICN 2","ICON PAD_L":"ICN 4","ICON PAD_R":"ICN 5",
   "ICON PAD_CROSS":"ICN 9","ICON PAD_SLIDE":"ICN 8",
@@ -788,7 +788,7 @@ const VER_TO={1:66049,2:66306};
 const LANG_TO={Japanese:0,English:1,French:2,Spanish:3,German:4,Italian:5};
 function replaceFullwidth(s){return s.replace(/[\uFF00-\uFFEF]/g,'###');}
 
-// ── JSON (USR2) -> GMD binary ────────────────────────
+// ── JSON (USER2) -> GMD binary ────────────────────────
 // jsonData: {name, labels: [[label,text],...]}
 // targetVer: 1 (GS5) or 2 (GS6)
 function jsonToGmd(jsonData, targetVer, isLE=true){
@@ -802,7 +802,7 @@ function jsonToGmd(jsonData, targetVer, isLE=true){
 
   for(const [label, text] of jsonData.labels){
     labelNames.push(label);
-    // text comes in as USR2/JSON form (with \r\n line endings, XXXX-prefixed, comma-separated tags)
+    // text comes in as USER2/JSON form (with \r\n line endings, XXXX-prefixed, comma-separated tags)
     let lines = text.split(/\r\n|\n/);
     let out = [];
     for(let l of lines){
@@ -1076,7 +1076,7 @@ function dlEncoded(){
   dlBlob(new Blob([encOutBytes],{type:'application/octet-stream'}),encOutName||'output.user.2.en');
 }
 
-// ── USR2 -> GMD ──────────────────────────────────────────
+// ── USER2 -> GMD ──────────────────────────────────────────
 setupDrop('drop-gmd','gmd-file-input',async f=>{
   gmdFileName=f.name;
   document.getElementById('gmd-drop-text').textContent=f.name;
