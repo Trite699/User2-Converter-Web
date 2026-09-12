@@ -102,6 +102,7 @@ h1{font-size:22px;font-weight:500;margin-bottom:4px;}
 .preview-stats{font-size:11px;color:var(--text-tertiary);margin-bottom:8px;}
 .raw-view{font-family:monospace;font-size:11px;line-height:1.65;white-space:pre-wrap;word-break:break-all;color:var(--text-secondary);}
 .empty-note{font-size:13px;color:var(--text-tertiary);text-align:center;padding:2rem 0;}
+.warn-note{font-size:12px;color:var(--text-warn);background:var(--bg-warn);border-radius:var(--r-md);padding:8px 10px;margin-top:8px;}
 </style>
 </head>
 <body>
@@ -212,6 +213,7 @@ h1{font-size:22px;font-weight:500;margin-bottom:4px;}
         <button class="btn btn-primary" id="btn-gmd" disabled onclick="runGmd()">Convert USER2 → .gmd</button>
       </div>
       <div class="status" id="gmd-status" style="display:none"><span class="dot"></span><span id="gmd-status-text"></span></div>
+      <div class="warn-note" id="gmd-v2-warn" style="display:none">Note: GMD V2 (GS6) label headers carry auxiliary hash/reference tables that only exist inside a real .gmd file. A USER2 file has no record of them, so this rebuild derives fresh hashes from each label name (matching what the reference decoder does when that data is absent) rather than reproducing the original file byte-for-byte.</div>
     </div>
 
     <div class="card" id="gmd-out-card" style="display:none">
@@ -261,6 +263,7 @@ function setGmdVer(v) {
   document.getElementById('gmd-xor-note').textContent = v===1
     ? 'V1 (GS5 / Dual Destinies) always applies XOR encryption.'
     : 'V2 (GS6 / Spirit of Justice) — no XOR encryption applied.';
+  document.getElementById('gmd-v2-warn').style.display = v===2 ? 'flex' : 'none';
 }
 
 function switchPreviewTab(name) {
@@ -337,7 +340,7 @@ class Writer{
   constructor(){this.chunks=[];this.size=0;}
   write(d){const a=d instanceof Uint8Array?d:new Uint8Array(d);this.chunks.push(a);this.size+=a.length;}
   u8(v){this.write([v]);}
-  u32(v){const b=new ArrayBuffer(4);new DataView(b).setUint32(0,v>>>0,true);this.write(new Uint8Array(b));}
+  u32(v,le=true){const b=new ArrayBuffer(4);new DataView(b).setUint32(0,v>>>0,le);this.write(new Uint8Array(b));}
   u64(v){
     const b=new ArrayBuffer(8);const dv=new DataView(b);
     const lo=v % 4294967296, hi=Math.floor(v/4294967296);
@@ -355,6 +358,7 @@ class Writer{
   pad4(){while(this.size%4!==0)this.u8(0);}
   toU8(){const out=new Uint8Array(this.size);let off=0;for(const c of this.chunks){out.set(c,off);off+=c.length;}return out;}
 }
+Writer.prototype.str=function(s){this.write(new TextEncoder().encode(s));};
 
 function bytesEq(a,str){
   if(a.length<str.length)return false;
@@ -514,7 +518,15 @@ function encodeUsr2(data){
   return w.toU8();
 }
 
-// ── GMD MAPPINGS (reversed for USER2 -> GMD) ─────────
+// ══════════════════════════════════════════════════════
+// GMD PIPELINE — ported verbatim from the GMD Script Converter tool.
+// The USER2 → GMD tab reconstructs the exact same intermediate "decoded
+// text" representation that tool's Decode function produces, then feeds
+// it through the same textToGmd binary writer, so the tag mapping, the
+// <SEC_END> handling, the V1/V2 header layout, and the XOR/hash logic all
+// match the canonical implementation exactly.
+// ══════════════════════════════════════════════════════
+
 const DD_MAPPING = {
   "CNTR":"CENTER","ICON PAD_X":"ICN 2","ICON PAD_L":"ICN 4","ICON PAD_R":"ICN 5",
   "ICON PAD_CROSS":"ICN 9","ICON PAD_SLIDE":"ICN 8",
@@ -725,35 +737,28 @@ const SOJ_OVERWRITE = {
   "E268":"INV_CAM_RET_FORCE","E515":"CAM_RETURN_DEFAULT"
 };
 
-// build forward mapping (GMD-internal-code -> readable-tag), then invert
-function buildForwardMapping(isSOJ) {
+// Forward mapping used by the GMD Script Converter's Decode/GMD→USER2 path:
+// key = raw GMD E-code, value = human-readable tag name.
+function buildMapping(isSOJ) {
   if(isSOJ) return {...DD_MAPPING,...SOJ_MAPPING,...SOJ_OVERWRITE};
   return {...DD_MAPPING,...SOJ_MAPPING};
 }
-// inverted: readable-tag -> GMD-internal-code, for re-encoding back to GMD form
+// Reverse mapping for USER2 -> GMD: key = readable tag name, value = raw E-code.
 function buildReverseMapping(isSOJ){
-  const fwd=buildForwardMapping(isSOJ);
+  const fwd=buildMapping(isSOJ);
   const rev={};
   for(const [code,tag] of Object.entries(fwd))rev[tag]=code;
   return rev;
 }
 
-const NO_PREFIX_TAGS = new Set(["CENTER","ICN","PAGE"]);
-const NO_COMMA_TAGS = new Set(["ICN ","ICN 0","ICN 2","ICN 4","ICN 5","ICN 6","ICN 7","ICN 8","ICN 9","ICN 10","ICN 11","ICN 12","ICN 13","ICN 14","ICN 15","ICN 16","ICN 19","ICN 20","ICN 21","ICN 22","ICN 23"]);
-
-// ── REVERSE TAG TRANSFORM: USR2/JSON text form -> GMD text form ──
-// Undo addPrefixAndCommas: strip "XXXX " prefix and convert commas back to spaces inside tags
+// ── Reverse of addPrefixAndCommas: strip "XXXX " prefix, commas -> spaces ──
 function stripPrefixAndCommas(line){
-  // remove "XXXX " prefix added before tag names
   line = line.replace(/<XXXX\s+(\w+)/g, '<$1');
-  // convert commas back to spaces inside tag brackets
-  line = line.replace(/<([^>]+)>/g, (match, inner) => {
-    return '<' + inner.replace(/,/g,' ') + '>';
-  });
+  line = line.replace(/<([^>]+)>/g, (match, inner) => '<' + inner.replace(/,/g,' ') + '>');
   return line;
 }
 
-// Reverse applyTagMapping: convert readable tags back to internal GMD codes (E0xx etc)
+// ── Reverse of applyTagMapping: readable tag name -> raw E-code ──
 function reverseTagMapping(line, reverseMap){
   for(const [tag, code] of Object.entries(reverseMap)) {
     const esc = tag.replace(/[.*+?^${}()|[\]\\]/g,'\\$&');
@@ -762,15 +767,7 @@ function reverseTagMapping(line, reverseMap){
   return line;
 }
 
-// re-add <SEC_END> markers that were stripped during the original conversion
-function restoreSecEnd(text){
-  // The original tool appended '<SEC_END>' to each label's content during gmdToText,
-  // then later stripped it during convertToJson via REMOVE_TAGS.
-  // We re-append it at the end of each label's text.
-  return text + '<SEC_END>';
-}
-
-// ── HASHING (for V2 label offset table) ─────────────
+// ── HASHING (CRC32-based, for V2 label offset table) ─────────────
 const CRC32T=(()=>{const t=new Uint32Array(256);for(let i=0;i<256;i++){let c=i;for(let j=0;j<8;j++)c=(c&1)?(0xEDB88320^(c>>>1)):(c>>>1);t[i]=c;}return t;})();
 function crc32(s){const e=new TextEncoder().encode(s);let c=0xFFFFFFFF;for(const b of e)c=CRC32T[(c^b)&0xFF]^(c>>>8);return(c^0xFFFFFFFF)>>>0;}
 function calcHash(label){return[(~crc32(label+label))>>>0,(~crc32(label+label+label))>>>0];}
@@ -788,51 +785,116 @@ const VER_TO={1:66049,2:66306};
 const LANG_TO={Japanese:0,English:1,French:2,Spanish:3,German:4,Italian:5};
 function replaceFullwidth(s){return s.replace(/[\uFF00-\uFFEF]/g,'###');}
 
-// ── JSON (USER2) -> GMD binary ────────────────────────
-// jsonData: {name, labels: [[label,text],...]}
-// targetVer: 1 (GS5) or 2 (GS6)
-function jsonToGmd(jsonData, targetVer, isLE=true){
-  const isSOJ = (targetVer===2);
+// ── Rebuild the "decoded GMD text" (same shape gmdToText() produces) ────
+// directly from USER2 JSON {name, labels:[[label,text],...]}.
+// This is the exact structural inverse of convertToJson()+gmdToText()
+// in the GMD Script Converter tool.
+function jsonToGmdText(jsonData, targetVer){
+  const isSOJ = targetVer === 2;
   const reverseMap = buildReverseMapping(isSOJ);
-
-  const labelNames=[];
-  let contentBytes=new Uint8Array(0);
-  const enc=new TextEncoder();
-  const labelTextsForPreview=[];
-
-  for(const [label, text] of jsonData.labels){
-    labelNames.push(label);
-    // text comes in as USER2/JSON form (with \r\n line endings, XXXX-prefixed, comma-separated tags)
-    let lines = text.split(/\r\n|\n/);
-    let out = [];
-    for(let l of lines){
-      l = stripPrefixAndCommas(l);
-      l = reverseTagMapping(l, reverseMap);
-      out.push(l);
-    }
-    let restored = out.join('\r\n');
-    restored = restoreSecEnd(restored);
-    labelTextsForPreview.push(restored);
-
-    // GMD format: SEC_END marker becomes \x00, \r\n stays as-is in bytes (encoded as written)
-    const fixed = restored.replace(/<SEC_END>/g,'\x00');
-    const bytes = enc.encode(fixed);
-    const merged = new Uint8Array(contentBytes.length+bytes.length);
-    merged.set(contentBytes);merged.set(bytes,contentBytes.length);
-    contentBytes = merged;
-  }
-
-  const labelCount = labelNames.length;
-  const sectionCount = labelCount;
+  const labels = jsonData.labels;
+  const labelCount = labels.length;
   const filename = jsonData.name || '';
   const language = 'English';
-  const langInt = LANG_TO[language]??1;
-  const versionInt = VER_TO[targetVer]||targetVer;
-  const xorEncoding = (targetVer===1);
+  const enc = new TextEncoder();
 
-  const labelStr = labelNames.join('\x00')+'\x00';
-  const labelSizeCalc = labelCount<1?0:replaceFullwidth(labelStr).length;
-  const sectionSizeCalc = contentBytes.length;
+  // Reverse-transform each label's USER2 text back into raw GMD content:
+  // readable tags -> E-codes, "XXXX "/comma formatting stripped, trailing
+  // <SEC_END> marker restored (it was stripped line-by-line during the
+  // original GMD -> JSON conversion, but always sat at the very end of the
+  // label's content with no separating newline).
+  const restoredContents = labels.map(([label, text]) => {
+    const srcLines = text.split(/\r\n|\n/);
+    const outLines = srcLines.map(l => reverseTagMapping(stripPrefixAndCommas(l), reverseMap));
+    return outLines.join('\n') + '<SEC_END>';
+  });
+
+  const out = [];
+  out.push(`{${filename}}\n`);
+  out.push(`{GMD V${targetVer}}\n`);
+  out.push(`{${language}}\n`);
+  out.push(`{${labelCount}}\n`);
+  out.push(`{${labelCount}}\n`);
+  if(targetVer === 2){
+    // These three tables (labelRef2 / label_data / ff_marker) only exist
+    // inside a real .gmd file's V2 header. USER2 carries none of that, so
+    // we emit empty placeholders — exactly what textToGmd() falls back to
+    // when a decoded .txt is missing them.
+    out.push(`{[]}\n`);
+    out.push(`{[]}\n`);
+    out.push(`{[]}\n`);
+  }
+  out.push('\n');
+
+  let runningOffset = 0;
+  for(let i=0;i<labelCount;i++){
+    const [label] = labels[i];
+    let offsetStr;
+    if(targetVer === 1){
+      offsetStr = String(runningOffset);
+    } else {
+      const [h1,h2] = calcHash(label);
+      offsetStr = `${h1}+${h2}`;
+    }
+    const isLast = i === labelCount-1;
+    out.push(`{${i}:${offsetStr}:${label}}\n${restoredContents[i]}${isLast?'':'\n\n'}`);
+
+    const fixed = restoredContents[i].replace(/<SEC_END>/g,'\x00').replace(/\n/g,'\r\n');
+    runningOffset += enc.encode(fixed).length;
+  }
+
+  return out.join('');
+}
+
+// ── textToGmd — ported verbatim from the GMD Script Converter tool ──────
+// Parses the decoded-text format built above and writes the real .gmd
+// binary: header, per-label offset/hash table, label name blob, then the
+// (optionally XOR-encrypted) content blob.
+function textToGmd(text,isLE=true,targetVer=null){
+  const lines=text.split('\n');let li=0;
+  const filename=lines[li++].trim().replace(/^\{|\}$/g,'');
+  let version=parseInt(lines[li++].trim().replace(/^\{|\}$/g,'').replace('GMD V',''));
+  if(targetVer&&[1,2].includes(targetVer))version=targetVer;
+  const language=lines[li++].trim().replace(/^\{|\}$/g,'');
+  const labelCount=parseInt(lines[li++].trim().replace(/^\{|\}$/g,''));
+  const sectionCount=parseInt(lines[li++].trim().replace(/^\{|\}$/g,''));
+  let lr2='[]',lm='[]',lmm='[]';
+  if(version===2){lr2=lines[li++].trim().replace(/^\{|\}$/g,'');lm=lines[li++].trim().replace(/^\{|\}$/g,'');lmm=lines[li++].trim().replace(/^\{|\}$/g,'');}
+  while(li<lines.length&&lines[li].trim()==='')li++;
+
+  const labels=[];let cur=null,cc=[];
+  for(;li<lines.length;li++){
+    const line=lines[li];
+    if(line.startsWith('{')&&line.includes(':')){
+      if(cur){cur.content=cc.join('\n').replace(/\n+$/,'');labels.push(cur);cc=[];}
+      const inner=line.slice(1,line.lastIndexOf('}'));
+      const parts=inner.split(':');
+      if(version===1)cur={index:parseInt(parts[0]),offset:parseInt(parts[1]),name:parts.slice(2).join(':'),content:null};
+      else{const[h1s,h2s]=parts[1].split('+');cur={index:parseInt(parts[0]),offset:{hash1:parseInt(h1s),hash2:parseInt(h2s)},name:parts.slice(2).join(':'),content:null};}
+    } else if(cur)cc.push(lines[li]);
+  }
+  if(cur){cur.content=cc.join('\n').replace(/\n+$/,'');labels.push(cur);}
+
+  const enc=new TextEncoder();
+  let contentBytes=new Uint8Array(0);
+  const labelNames=[];
+  const offsets=version===1?[]:{};
+
+  for(const label of labels){
+    labelNames.push(label.name);
+    const fixed=label.content.replace(/<SEC_END>/g,'\x00').replace(/\n/g,'\r\n');
+    const bytes=enc.encode(fixed);
+    const m=new Uint8Array(contentBytes.length+bytes.length);m.set(contentBytes);m.set(bytes,contentBytes.length);contentBytes=m;
+    if(version===1){offsets.push(label.index);offsets.push(label.offset);}
+    else{const[h1o,h2o]=[label.offset.hash1,label.offset.hash2];const[h1n,h2n]=calcHash(label.name);offsets[label.index]=[h1o!==h1n?h1n:h1o,h2o!==h2n?h2n:h2o];}
+  }
+
+  const labelStr=labelNames.join('\x00')+'\x00';
+  const labelSizeCalc=labelCount<1?0:replaceFullwidth(labelStr).length;
+  const sectionSizeCalc=contentBytes.length;
+  const langInt=LANG_TO[language]??1;
+  const versionInt=VER_TO[version]||version;
+  const xorEncoding=(version===1);
 
   const w=new Writer();
   w.write([71,77,68,0]);
@@ -841,85 +903,43 @@ function jsonToGmd(jsonData, targetVer, isLE=true){
   w.u32(labelSizeCalc,isLE);w.u32(sectionSizeCalc,isLE);w.u32(filename.length,isLE);
   w.str(filename);w.u8(0);
 
-  // Compute content offsets (running byte position within content) for each label
-  let runningOffset=0;
-  const contentOffsets=[];
-  for(const [label,text] of jsonData.labels){
-    contentOffsets.push(runningOffset);
-    let lines = text.split(/\r\n|\n/);
-    let out=[];
-    for(let l of lines){
-      l=stripPrefixAndCommas(l);
-      l=reverseTagMapping(l, reverseMap);
-      out.push(l);
+  if(version===1){for(const o of offsets)w.u32(o>>>0,isLE);}
+  else{
+    const labelRef2=JSON.parse(lr2||'[]');
+    let curPos=0;const labelPos={};
+    for(const n of labelNames){const[h1,h2]=calcHash(n);labelPos[curPos]=[h1,h2];curPos+=replaceFullwidth(n).length+1;}
+    for(const[pos,[h1,h2]] of Object.entries(labelPos)){
+      const pInt=parseInt(pos);
+      for(const[,vals] of Object.entries(offsets))if(vals.includes(h1)||vals.includes(h2))if(!vals.includes(pInt))vals.push(pInt);
     }
-    let restored=out.join('\r\n');
-    restored=restoreSecEnd(restored);
-    const fixed=restored.replace(/<SEC_END>/g,'\x00');
-    runningOffset += enc.encode(fixed).length;
-  }
-
-  if(targetVer===1){
-    for(let i=0;i<labelCount;i++){
-      w.u32(i,isLE); // index
-      w.u32(contentOffsets[i]>>>0,isLE); // offset
-    }
-  } else {
-    // version 2: index + hash1 + hash2, plus ref1/ref2, then 1024-byte hash table
-    const offsets=[];
-    for(let i=0;i<labelCount;i++){
-      const [h1,h2]=calcHash(labelNames[i]);
-      offsets.push([h1,h2]);
-    }
-    let curPos=0;
-    const labelPosMap={};
-    for(const n of labelNames){const[h1,h2]=calcHash(n);labelPosMap[curPos]=[h1,h2];curPos+=replaceFullwidth(n).length+1;}
-    for(let i=0;i<labelCount;i++){
-      const[h1,h2]=offsets[i];
-      let ref2=0;
-      for(const[pos,[ph1,ph2]] of Object.entries(labelPosMap)){
-        if(ph1===h1||ph2===h2){ref2=parseInt(pos);break;}
-      }
-      w.u32(i,isLE);
-      w.u32(h1>>>0,isLE);
-      w.u32(h2>>>0,isLE);
-      w.u32(ref2>>>0,isLE);
-      w.u32(0,isLE); // ref1 (best-effort, unused on roundtrip)
-    }
-    // 1024-byte hash table
+    if(labelRef2.length===Object.keys(offsets).length)for(const[key,vals] of Object.entries(offsets))vals.push(labelRef2[parseInt(key)]);
+    for(const[key,vals] of Object.entries(offsets)){w.u32(parseInt(key),isLE);for(const v of vals)w.u32(v>>>0,isLE);}
+    const allTuples=[...JSON.parse(lm||'[]'),...JSON.parse(lmm||'[]')].sort((a,b)=>a[0]-b[0]);
     const hashBuf=new Uint8Array(1024);const hv=new DataView(hashBuf.buffer);
-    let pos=0;
-    for(let i=0;i<labelCount;i++){
-      const [h1,h2]=offsets[i];
-      if(pos+8<=1024){hv.setUint32(pos,h1>>>0,isLE);hv.setUint32(pos+4,h2>>>0,isLE);}
-      pos+=8;
-    }
+    for(const[pos,val] of allTuples)if(pos<1024)hv.setUint32(pos,val>>>0,isLE);
     w.write(hashBuf);
   }
 
   for(const n of labelNames){w.str(n);w.u8(0);}
   w.write(xorEncoding?xorCipher(contentBytes,1):contentBytes);
-
-  // Build a human-readable preview of the GMD text form
-  const previewLines=[];
-  previewLines.push(`{${filename}}`);
-  previewLines.push(`{GMD V${targetVer}}`);
-  previewLines.push(`{${language}}`);
-  previewLines.push(`{${labelCount}}`);
-  previewLines.push(`{${sectionCount}}`);
-  previewLines.push('');
-  for(let i=0;i<labelCount;i++){
-    const off = targetVer===1 ? String(contentOffsets[i]) : `${contentOffsets[i]}+0`;
-    previewLines.push(`{${i}:${off}:${labelNames[i]}}`);
-    previewLines.push(labelTextsForPreview[i]);
-    if(i!==labelCount-1)previewLines.push('');
-  }
-
-  return {bytes:w.toU8(), preview:previewLines.join('\n'), labelNames, labelTexts:labelTextsForPreview};
+  return w.toU8();
 }
 
-// extend Writer with str()
-Writer.prototype.str=function(s){this.write(new TextEncoder().encode(s));};
+// ── Top-level: JSON (decoded USER2) -> GMD binary ────────────────────
+function jsonToGmd(jsonData, targetVer){
+  const text = jsonToGmdText(jsonData, targetVer);
+  const bytes = textToGmd(text, true, targetVer);
+
+  const isSOJ = targetVer === 2;
+  const reverseMap = buildReverseMapping(isSOJ);
+  const labelNames = jsonData.labels.map(([l]) => l);
+  const labelTexts = jsonData.labels.map(([label, t]) => {
+    const srcLines = t.split(/\r\n|\n/);
+    return srcLines.map(l => reverseTagMapping(stripPrefixAndCommas(l), reverseMap)).join('\n');
+  });
+
+  return {bytes, preview: text, labelNames, labelTexts};
+}
 
 // ── PREVIEW RENDERER ─────────────────────────────────
 let previewData = null;
@@ -1112,7 +1132,7 @@ async function runGmd(){
     if(!res.isGs56)throw new Error('GS4 files contain no script labels');
 
     setStatus('gmd-status','Stage 2/2: Encoding GMD V'+gmdTargetVer+'…','');
-    const result=jsonToGmd(res.data, gmdTargetVer, true);
+    const result=jsonToGmd(res.data, gmdTargetVer);
     gmdOutBytes=result.bytes;
     gmdOutName=baseName(gmdFileName)+'.gmd';
     document.getElementById('gmd-dl-meta').textContent=gmdOutName+' · '+formatBytes(gmdOutBytes.length)+(gmdTargetVer===1?' · XOR encrypted':'');
