@@ -573,13 +573,14 @@ function parseContainer(u8){
   if(bytesEq(u8,'USR\0')){
     if(len<USRHDR_SIZE)throw new Error('file too small');
     const rc=r32(4),uc=r32(8),ic=r32(12);
-    if(rc!==0||ic!==0)throw new Error('USR resource/info tables are not supported (resources='+rc+', infos='+ic+')');
-    if(r64(16)!==USRHDR_SIZE||r64(24)!==USRHDR_SIZE)throw new Error('unexpected USR table offsets');
+    if(ic!==0)throw new Error('USR info tables are not supported (infos='+ic+')');
+    if(r64(16)!==USRHDR_SIZE||r64(24)!==USRHDR_SIZE+8*rc)throw new Error('unexpected USR table offsets');
     if(r64(40)!==0)throw new Error('unexpected USR header padding');
     base=r64(32);
-    usr={userdata:[]};
+    usr={resources:[],userdata:[]};
+    for(let i=0;i<rc;i++)usr.resources.push(u16z(u8,r64(USRHDR_SIZE+8*i)));
     for(let i=0;i<uc;i++){
-      const q=USRHDR_SIZE+16*i;
+      const q=USRHDR_SIZE+8*rc+16*i;
       usr.userdata.push({typeId:r32(q),crc:r32(q+4),path:u16z(u8,r64(q+8))});
     }
   }
@@ -612,13 +613,16 @@ function buildContainer(c){
   const ins=c.instances,objs=c.objects,uds=c.userdata||[];
   let base=0;
   if(c.usr){
-    const ud=c.usr.userdata;
-    let cur=USRHDR_SIZE+16*ud.length;const offs=[];
+    const ud=c.usr.userdata,res=c.usr.resources||[];
+    let cur=USRHDR_SIZE+8*res.length+16*ud.length;const roffs=[],offs=[];
+    for(const r of res){roffs.push(cur);cur+=(r.length+1)*2;}
     for(const u of ud){offs.push(cur);cur+=(u.path.length+1)*2;}
     base=cur;
-    w.write([85,83,82,0]);w.u32(0);w.u32(ud.length);w.u32(0);
-    w.u64(USRHDR_SIZE);w.u64(USRHDR_SIZE);w.u64(base);w.u64(0);
+    w.write([85,83,82,0]);w.u32(res.length);w.u32(ud.length);w.u32(0);
+    w.u64(USRHDR_SIZE);w.u64(USRHDR_SIZE+8*res.length);w.u64(base);w.u64(0);
+    roffs.forEach(o=>w.u64(o));
     ud.forEach((u,i)=>{w.u32(u.typeId);w.u32(u.crc);w.u64(offs[i]);});
+    for(const r of res)w.strU16(r);
     for(const u of ud)w.strU16(u.path);
   }
   const instEnd=base+48+4*objs.length+8*(ins.length+1);
@@ -644,7 +648,7 @@ function containerToGenericJson(c,fileName){
   return {
     format:'rsz-generic',
     fileName:fileName||'',
-    usr:c.usr?{userdata:c.usr.userdata.map(u=>({typeId:hex32(u.typeId),crc:hex32(u.crc),path:u.path}))}:null,
+    usr:c.usr?{resources:c.usr.resources.slice(),userdata:c.usr.userdata.map(u=>({typeId:hex32(u.typeId),crc:hex32(u.crc),path:u.path}))}:null,
     rsz:{
       objects:c.objects.slice(),
       instances:c.instances.map(([t,cr])=>({typeId:hex32(t),crc:hex32(cr)})),
@@ -659,7 +663,7 @@ function genericJsonToContainer(j){
   let usr=null;
   if(j.usr){
     if(!Array.isArray(j.usr.userdata))throw new Error('incorrect JSON structure: "usr.userdata" must be an array');
-    usr={userdata:j.usr.userdata.map(u=>({typeId:unhex32(u.typeId),crc:unhex32(u.crc),path:String(u.path)}))};
+    usr={resources:(j.usr.resources||[]).map(String),userdata:j.usr.userdata.map(u=>({typeId:unhex32(u.typeId),crc:unhex32(u.crc),path:String(u.path)}))};
   }
   return {
     usr,
@@ -676,7 +680,7 @@ function genericJsonToContainer(j){
 //   u64 key (two u32 hashes, 8-aligned) + array<u32> (count + positions).
 const CLASS_MARKER_ITEM=[0xf1983306,0x611a790f];
 function containerToMarkerJson(c,fileName){
-  if(!c.usr||c.usr.userdata.length||c.userdata.length)throw new Error('has userdata');
+  if(!c.usr||c.usr.userdata.length||c.usr.resources.length||c.userdata.length)throw new Error('has userdata');
   const ins=c.instances,n=ins.length-1;
   if(n<0||c.objects.length!==1||c.objects[0]!==ins.length)throw new Error('root object is not the last instance');
   for(let i=0;i<n;i++)if(ins[i][0]!==CLASS_MARKER_ITEM[0]||ins[i][1]!==CLASS_MARKER_ITEM[1])throw new Error('non-marker instance');
@@ -723,7 +727,7 @@ function markerJsonToContainer(j){
   const instances=[];
   for(let i=0;i<n;i++)instances.push(item);
   instances.push(root);
-  return {usr:{userdata:[]},objects:[n+1],instances,userdata:[],data:w.toU8()};
+  return {usr:{resources:[],userdata:[]},objects:[n+1],instances,userdata:[],data:w.toU8()};
 }
 
 // ── Dispatchers ───────────────────────────────────────
