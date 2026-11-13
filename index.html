@@ -108,7 +108,7 @@ h1{font-size:22px;font-weight:500;margin-bottom:4px;}
 <body>
 <div class="wrap">
   <h1>USER2 Script Converter</h1>
-  <p class="sub">RE Engine USER2 (GS4/GS56) script container ↔ JSON ↔ GMD · Auto-detects format</p>
+  <p class="sub">RE Engine USER2 / RSZ container (GS4/GS56 scripts, marker lists, sound settings, mixers…) ↔ JSON ↔ GMD · Auto-detects format</p>
 
   <div class="tabs">
     <button class="tab-btn active" onclick="switchTab('decode')">USER2 → JSON</button>
@@ -125,8 +125,8 @@ h1{font-size:22px;font-weight:500;margin-bottom:4px;}
       </div>
       <label class="drop" id="drop-decode">
         <div class="drop-icon"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
-        <span class="drop-label" id="dec-drop-text">Click or drop a .user.2.en file</span>
-        <span class="drop-hint">USER / RSZ container — GS4 or GS56, auto-detected</span>
+        <span class="drop-label" id="dec-drop-text">Click or drop a .user.2 file</span>
+        <span class="drop-hint">USER / RSZ container — scripts, markers, sound settings, mixer… auto-detected</span>
         <input type="file" id="dec-file-input" accept=".en,.bin,.user2,*">
       </label>
       <div class="meta-grid" id="dec-meta" style="display:none"></div>
@@ -191,7 +191,7 @@ h1{font-size:22px;font-weight:500;margin-bottom:4px;}
       </div>
       <label class="drop" id="drop-gmd">
         <div class="drop-icon"><svg viewBox="0 0 24 24"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg></div>
-        <span class="drop-label" id="gmd-drop-text">Click or drop a .user.2.en file</span>
+        <span class="drop-label" id="gmd-drop-text">Click or drop a .user.2 file</span>
         <span class="drop-hint">USER / RSZ container with GS56 labels</span>
         <input type="file" id="gmd-file-input" accept=".en,.bin,.user2,*">
       </label>
@@ -359,6 +359,7 @@ class Writer{
   toU8(){const out=new Uint8Array(this.size);let off=0;for(const c of this.chunks){out.set(c,off);off+=c.length;}return out;}
 }
 Writer.prototype.str=function(s){this.write(new TextEncoder().encode(s));};
+Writer.prototype.padTo=function(n){while(this.size%n!==0)this.u8(0);};
 
 function bytesEq(a,str){
   if(a.length<str.length)return false;
@@ -374,9 +375,9 @@ const CLASS_GS4  = [0xdaa48445, 0x5212daa2];
 const CLASS_GS56 = [0x83f3f042, 0x0b263156];
 const CLASS_NAME = [0xee933aa7, 0x1aa1a4ac];
 
-// ── DETECT FORMAT ────────────────────────────────────
+// ── DETECT FORMAT (GS4 / GS56 script containers only) ─
 // Returns {ok:bool, isGs56:bool, instanceCount, dataOffset, error}
-function detectUsr2(u8){
+function detectGsUsr2(u8){
   if(u8.length<USRHDR_SIZE+16)return{ok:false,error:'File too small'};
   if(!bytesEq(u8,'USR\0'))return{ok:false,error:'Bad magic (expected "USR\\0")'};
   const r=new Reader(u8);
@@ -424,9 +425,9 @@ if(r.tell()!==USRHDR_SIZE)return{ok:false,error:'Header size mismatch'};
   return{ok:true,isGs56,instanceCount,dataOffset:USRHDR_SIZE+dataOffset};
 }
 
-// ── USER2 -> JSON ─────────────────────────────────────
-function decodeUsr2(u8){
-  const det=detectUsr2(u8);
+// ── USER2 -> JSON (GS4 / GS56) ───────────────────────
+function decodeGsUsr2(u8){
+  const det=detectGsUsr2(u8);
   if(!det.ok)throw new Error(det.error);
   const r=new Reader(u8);
   r.seek(det.dataOffset);
@@ -453,13 +454,13 @@ function decodeUsr2(u8){
       const v=r.u32();
       if(v!==i+1)throw new Error('label index table value mismatch at '+i);
     }
-    return {isGs56:true,data};
+    return {isGs56:true,kind:'gs56',data};
   } else {
     const size=r.u32();
     const cur=r.tell();
     if(size!==u8.length-cur)throw new Error('data size mismatch');
     const raw=r.bytes(size);
-    return {isGs56:false,raw};
+    return {isGs56:false,kind:'gs4',raw};
   }
 }
 
@@ -516,6 +517,246 @@ function encodeUsr2(data){
   for(let i=0;i<instanceCount-1;i++)w.u32(i+1);
 
   return w.toU8();
+}
+
+
+// ══════════════════════════════════════════════════════
+// GENERIC USER2 / RSZ CONTAINER + NON-SCRIPT FORMATS
+// Handles every RE Engine .user.2 / bare RSZ file, not just the GS4/GS56
+// script containers: marker info lists, sound manager settings (files with
+// UserData references), mixer files (bare RSZ with no USR wrapper), etc.
+// ══════════════════════════════════════════════════════
+const hex32=v=>'0x'+(v>>>0).toString(16).padStart(8,'0');
+function unhex32(v){
+  if(typeof v==='number'&&Number.isInteger(v)&&v>=0&&v<=0xFFFFFFFF)return v>>>0;
+  if(typeof v==='string'&&/^(0x)?[0-9a-fA-F]{1,8}$/.test(v))return parseInt(v.replace(/^0x/i,''),16)>>>0;
+  throw new Error('invalid 32-bit value: '+JSON.stringify(v));
+}
+function u16z(u8,p){ // NUL-terminated UTF-16LE string at absolute offset p
+  let s='';
+  for(;;){
+    if(p+2>u8.length)throw new Error('unterminated string');
+    const c=u8[p]|(u8[p+1]<<8);p+=2;
+    if(c===0)break;
+    s+=String.fromCharCode(c);
+  }
+  return s;
+}
+function bytesToHexLines(u8){
+  const lines=[];
+  for(let i=0;i<u8.length;i+=16){
+    const row=[];
+    for(let j=i;j<Math.min(i+16,u8.length);j++)row.push(u8[j].toString(16).padStart(2,'0'));
+    lines.push(row.join(' '));
+  }
+  return lines;
+}
+function hexToBytes(v){
+  const str=Array.isArray(v)?v.join(' '):v;
+  if(typeof str!=='string')throw new Error('"data" must be a hex string or an array of hex strings');
+  const clean=str.replace(/\s+/g,'');
+  if(clean.length%2||/[^0-9a-fA-F]/.test(clean))throw new Error('"data" is not valid hex');
+  const out=new Uint8Array(clean.length/2);
+  for(let i=0;i<out.length;i++)out[i]=parseInt(clean.substr(i*2,2),16);
+  return out;
+}
+
+// Parses the container structure only (no knowledge of per-class field layouts).
+// Returns {usr:{userdata:[{typeId,crc,path}]}|null, objects, instances (null entry excluded),
+//          userdata:[{instanceId,typeId,path}], data:Uint8Array}
+function parseContainer(u8){
+  const len=u8.length;
+  const dv=new DataView(u8.buffer,u8.byteOffset,u8.byteLength);
+  const r32=p=>{if(p<0||p+4>len)throw new Error('file truncated');return dv.getUint32(p,true);};
+  const r64=p=>{if(p<0||p+8>len)throw new Error('file truncated');return dv.getUint32(p+4,true)*4294967296+dv.getUint32(p,true);};
+  let usr=null,base=0;
+  if(bytesEq(u8,'USR\0')){
+    if(len<USRHDR_SIZE)throw new Error('file too small');
+    const rc=r32(4),uc=r32(8),ic=r32(12);
+    if(rc!==0||ic!==0)throw new Error('USR resource/info tables are not supported (resources='+rc+', infos='+ic+')');
+    if(r64(16)!==USRHDR_SIZE||r64(24)!==USRHDR_SIZE)throw new Error('unexpected USR table offsets');
+    if(r64(40)!==0)throw new Error('unexpected USR header padding');
+    base=r64(32);
+    usr={userdata:[]};
+    for(let i=0;i<uc;i++){
+      const q=USRHDR_SIZE+16*i;
+      usr.userdata.push({typeId:r32(q),crc:r32(q+4),path:u16z(u8,r64(q+8))});
+    }
+  }
+  if(!bytesEq(u8.subarray(base),'RSZ\0'))throw new Error('RSZ block not found');
+  if(r32(base+4)!==16)throw new Error('unexpected RSZ version '+r32(base+4));
+  const objc=r32(base+8),instc=r32(base+12),udc=r32(base+16);
+  if(r32(base+20)!==0)throw new Error('unexpected RSZ reserved field');
+  const instOff=r64(base+24),dataOff=r64(base+32),udOff=r64(base+40);
+  if(instOff!==48+4*objc)throw new Error('unexpected RSZ instance offset');
+  if(instc<1)throw new Error('RSZ has no instance table');
+  const objects=[];
+  for(let i=0;i<objc;i++)objects.push(r32(base+48+4*i));
+  let p=base+instOff;
+  if(r64(p)!==0)throw new Error('RSZ null instance entry missing');
+  p+=8;
+  const instances=[];
+  for(let i=1;i<instc;i++){instances.push([r32(p),r32(p+4)]);p+=8;}
+  const userdata=[];
+  for(let i=0;i<udc;i++){
+    const q=base+udOff+16*i;
+    userdata.push({instanceId:r32(q),typeId:r32(q+4),path:u16z(u8,base+r64(q+8))});
+  }
+  if(base+dataOff>len)throw new Error('RSZ data offset is outside the file');
+  return {usr,objects,instances,userdata,data:u8.slice(base+dataOff)};
+}
+
+// Rebuilds the exact byte layout parseContainer() reads.
+function buildContainer(c){
+  const w=new Writer();
+  const ins=c.instances,objs=c.objects,uds=c.userdata||[];
+  let base=0;
+  if(c.usr){
+    const ud=c.usr.userdata;
+    let cur=USRHDR_SIZE+16*ud.length;const offs=[];
+    for(const u of ud){offs.push(cur);cur+=(u.path.length+1)*2;}
+    base=cur;
+    w.write([85,83,82,0]);w.u32(0);w.u32(ud.length);w.u32(0);
+    w.u64(USRHDR_SIZE);w.u64(USRHDR_SIZE);w.u64(base);w.u64(0);
+    ud.forEach((u,i)=>{w.u32(u.typeId);w.u32(u.crc);w.u64(offs[i]);});
+    for(const u of ud)w.strU16(u.path);
+  }
+  const instEnd=base+48+4*objs.length+8*(ins.length+1);
+  const udAbs=roundUp(instEnd,16);
+  let cur=udAbs+16*uds.length;const poffs=[];
+  for(const u of uds){poffs.push(cur-base);cur+=(u.path.length+1)*2;}
+  const dataAbs=roundUp(cur,16);
+  w.write([82,83,90,0]);w.u32(16);w.u32(objs.length);w.u32(ins.length+1);w.u32(uds.length);w.u32(0);
+  w.u64(48+4*objs.length);w.u64(dataAbs-base);w.u64(udAbs-base);
+  for(const o of objs)w.u32(o);
+  w.u64(0);
+  for(const [t,cr] of ins){w.u32(t);w.u32(cr);}
+  while(w.size<udAbs)w.u8(0);
+  uds.forEach((u,i)=>{w.u32(u.instanceId);w.u32(u.typeId);w.u64(poffs[i]);});
+  for(const u of uds)w.strU16(u.path);
+  while(w.size<dataAbs)w.u8(0);
+  w.write(c.data);
+  return w.toU8();
+}
+
+// ── Generic (lossless, layout-agnostic) JSON ──────────
+function containerToGenericJson(c,fileName){
+  return {
+    format:'rsz-generic',
+    fileName:fileName||'',
+    usr:c.usr?{userdata:c.usr.userdata.map(u=>({typeId:hex32(u.typeId),crc:hex32(u.crc),path:u.path}))}:null,
+    rsz:{
+      objects:c.objects.slice(),
+      instances:c.instances.map(([t,cr])=>({typeId:hex32(t),crc:hex32(cr)})),
+      userdata:c.userdata.map(u=>({instanceId:u.instanceId,typeId:hex32(u.typeId),path:u.path}))
+    },
+    data:bytesToHexLines(c.data)
+  };
+}
+function genericJsonToContainer(j){
+  if(!j.rsz||!Array.isArray(j.rsz.objects)||!Array.isArray(j.rsz.instances))
+    throw new Error('incorrect JSON structure: "rsz.objects" and "rsz.instances" are required');
+  let usr=null;
+  if(j.usr){
+    if(!Array.isArray(j.usr.userdata))throw new Error('incorrect JSON structure: "usr.userdata" must be an array');
+    usr={userdata:j.usr.userdata.map(u=>({typeId:unhex32(u.typeId),crc:unhex32(u.crc),path:String(u.path)}))};
+  }
+  return {
+    usr,
+    objects:j.rsz.objects.map(unhex32),
+    instances:j.rsz.instances.map(i=>[unhex32(i.typeId),unhex32(i.crc)]),
+    userdata:(j.rsz.userdata||[]).map(u=>({instanceId:u.instanceId>>>0,typeId:unhex32(u.typeId),path:String(u.path)})),
+    data:hexToBytes(j.data)
+  };
+}
+
+// ── Marker info lists (gs5_stream_/gs6_ markerinfolistdata, silencemarkerinfolistdata) ──
+// Instance 0 is the null entry, instances 1..n are marker items, the last instance is the
+// list object whose only field is array<ref> to items 1..n. Each item is
+//   u64 key (two u32 hashes, 8-aligned) + array<u32> (count + positions).
+const CLASS_MARKER_ITEM=[0xf1983306,0x611a790f];
+function containerToMarkerJson(c,fileName){
+  if(!c.usr||c.usr.userdata.length||c.userdata.length)throw new Error('has userdata');
+  const ins=c.instances,n=ins.length-1;
+  if(n<0||c.objects.length!==1||c.objects[0]!==ins.length)throw new Error('root object is not the last instance');
+  for(let i=0;i<n;i++)if(ins[i][0]!==CLASS_MARKER_ITEM[0]||ins[i][1]!==CLASS_MARKER_ITEM[1])throw new Error('non-marker instance');
+  const d=c.data,dv=new DataView(d.buffer,d.byteOffset,d.byteLength);
+  let p=0;const markers=[];
+  const need=k=>{if(p+k>d.length)throw new Error('marker data truncated');};
+  const align=a=>{while(p%a!==0){need(1);if(d[p]!==0)throw new Error('non-zero padding');p++;}};
+  for(let i=0;i<n;i++){
+    align(8);need(12);
+    const hash=[hex32(dv.getUint32(p,true)),hex32(dv.getUint32(p+4,true))];p+=8;
+    const cnt=dv.getUint32(p,true);p+=4;need(4*cnt);
+    const positions=[];
+    for(let k=0;k<cnt;k++){positions.push(dv.getUint32(p,true));p+=4;}
+    markers.push({hash,positions});
+  }
+  align(4);need(4);
+  const rc=dv.getUint32(p,true);p+=4;
+  if(rc!==n)throw new Error('list ref count mismatch');
+  need(4*rc);
+  for(let i=0;i<rc;i++){if(dv.getUint32(p,true)!==i+1)throw new Error('list ref mismatch');p+=4;}
+  if(p!==d.length)throw new Error('trailing data');
+  return {format:'marker-info-list',fileName:fileName||'',
+    itemType:{typeId:hex32(CLASS_MARKER_ITEM[0]),crc:hex32(CLASS_MARKER_ITEM[1])},
+    rootType:{typeId:hex32(ins[n][0]),crc:hex32(ins[n][1])},
+    markers};
+}
+function markerJsonToContainer(j){
+  if(!Array.isArray(j.markers))throw new Error('incorrect JSON structure: "markers" must be an array');
+  if(!j.rootType)throw new Error('incorrect JSON structure: "rootType" is required');
+  const item=j.itemType?[unhex32(j.itemType.typeId),unhex32(j.itemType.crc)]:CLASS_MARKER_ITEM.slice();
+  const root=[unhex32(j.rootType.typeId),unhex32(j.rootType.crc)];
+  const n=j.markers.length;
+  const w=new Writer();
+  for(const m of j.markers){
+    if(!m||!Array.isArray(m.hash)||m.hash.length!==2||!Array.isArray(m.positions))
+      throw new Error('incorrect JSON structure: each marker needs "hash" [2 values] and "positions" []');
+    w.padTo(8);
+    w.u32(unhex32(m.hash[0]));w.u32(unhex32(m.hash[1]));
+    w.u32(m.positions.length);
+    for(const v of m.positions)w.u32(unhex32(v));
+  }
+  w.padTo(4);
+  w.u32(n);for(let i=1;i<=n;i++)w.u32(i);
+  const instances=[];
+  for(let i=0;i<n;i++)instances.push(item);
+  instances.push(root);
+  return {usr:{userdata:[]},objects:[n+1],instances,userdata:[],data:w.toU8()};
+}
+
+// ── Dispatchers ───────────────────────────────────────
+function sameBytes(a,b){if(a.length!==b.length)return false;for(let i=0;i<a.length;i++)if(a[i]!==b[i])return false;return true;}
+
+// Detect any USER2 / RSZ file. kind: gs56 | gs4 | markers | generic
+function detectUsr2(u8){
+  const g=detectGsUsr2(u8);
+  if(g.ok)return {...g,kind:g.isGs56?'gs56':'gs4'};
+  let c;
+  try{c=parseContainer(u8);}catch(e){return{ok:false,error:e.message};}
+  let kind='generic';
+  try{containerToMarkerJson(c,'');kind='markers';}catch(e){}
+  return {ok:true,isGs56:false,kind,instanceCount:c.instances.length+1,hasUsr:!!c.usr};
+}
+
+function decodeUsr2(u8,fileName){
+  const det=detectUsr2(u8);
+  if(!det.ok)throw new Error(det.error);
+  if(det.kind==='gs56'||det.kind==='gs4')return decodeGsUsr2(u8);
+  const c=parseContainer(u8);
+  const json=det.kind==='markers'?containerToMarkerJson(c,fileName):containerToGenericJson(c,fileName);
+  // verify the JSON converts back to the identical file
+  let verified=false;
+  try{verified=sameBytes(encodeAnyJson(JSON.parse(JSON.stringify(json))),u8);}catch(e){}
+  return {isGs56:false,kind:det.kind,json,verified};
+}
+
+function encodeAnyJson(data){
+  if(typeof data!=='object'||data===null)throw new Error('incorrect JSON structure');
+  if(data.format==='marker-info-list')return buildContainer(markerJsonToContainer(data));
+  if(data.format==='rsz-generic')return buildContainer(genericJsonToContainer(data));
+  return encodeUsr2(data);
 }
 
 // ══════════════════════════════════════════════════════
@@ -1021,10 +1262,11 @@ setupDrop('drop-decode','dec-file-input',async f=>{
   decFileData=new Uint8Array(buf);
   const det=detectUsr2(decFileData);
   if(det.ok){
-    const kind=det.isGs56?'GS56 (labelled script, V2 JSON)':'GS4 (raw binary blob)';
-    document.getElementById('dec-ver-badge').textContent=det.isGs56?'GS56':'GS4';
-    setStatus('dec-status',`Auto-detected ${kind} · ${formatBytes(f.size)}`,'ok');
-    setMeta('dec-meta',[['Format',det.isGs56?'GS56':'GS4'],['Instances',String(det.instanceCount)],['File',f.name],['Size',formatBytes(f.size)]]);
+    const KIND={gs56:['GS56','GS56 (labelled script, V2 JSON)'],gs4:['GS4','GS4 (raw binary blob)'],
+      markers:['MARKERS','marker info list (JSON)'],generic:['RSZ','generic RSZ container (lossless JSON)']}[det.kind];
+    document.getElementById('dec-ver-badge').textContent=KIND[0];
+    setStatus('dec-status',`Auto-detected ${KIND[1]} · ${formatBytes(f.size)}`,'ok');
+    setMeta('dec-meta',[['Format',KIND[0]],['Instances',String(det.instanceCount)],['File',f.name],['Size',formatBytes(f.size)]]);
   } else {
     document.getElementById('dec-ver-badge').textContent='?';
     setStatus('dec-status','Could not auto-detect: '+det.error,'warn');
@@ -1037,9 +1279,17 @@ async function runDecode(){
   if(!decFileData){setStatus('dec-status','No file loaded','err');return;}
   setStatus('dec-status','Decoding…','');
   try{
-    const res=decodeUsr2(decFileData);
+    const res=decodeUsr2(decFileData,decFileName);
     let jsonStr;
-    if(res.isGs56){
+    if(res.json){
+      jsonStr=JSON.stringify(res.json,null,2)+'\n';
+      decOutName=decFileName+'.json';
+      document.getElementById('dec-preview').value=jsonStr;
+      document.getElementById('dec-dl-meta').textContent=decOutName+' · '+formatBytes(new Blob([jsonStr]).size);
+      document.getElementById('dec-out-card').style.display='';
+      const what=res.kind==='markers'?`${res.json.markers.length} markers`:`${res.json.rsz.instances.length} instances`;
+      setStatus('dec-status',`Decoded · ${res.kind==='markers'?'marker info list':'generic RSZ'} · ${what}`+(res.verified?' · re-encode check passed':' · WARNING: re-encode does not match the original'),res.verified?'ok':'warn');
+    } else if(res.isGs56){
       jsonStr=JSON.stringify(res.data,null,2)+'\n';
       decOutName=baseName(decFileName)+'.json';
       document.getElementById('dec-preview').value=jsonStr;
@@ -1083,11 +1333,13 @@ async function runEncode(){
   setStatus('enc-status','Encoding…','');
   try{
     const data=JSON.parse(encFileText);
-    encOutBytes=encodeUsr2(data);
-    encOutName=baseName(encFileName)+'.user.2.en';
+    encOutBytes=encodeAnyJson(data);
+    const isNew=data&&(data.format==='marker-info-list'||data.format==='rsz-generic');
+    encOutName=isNew?(data.fileName||baseName(encFileName)+'.2'):baseName(encFileName)+'.user.2.en';
     document.getElementById('enc-dl-meta').textContent=encOutName+' · '+formatBytes(encOutBytes.length);
     document.getElementById('enc-out-card').style.display='';
-    setStatus('enc-status',`Encoded · ${data.labels.length} labels → ${encOutName}`,'ok');
+    const what=isNew?(data.format==='marker-info-list'?`${data.markers.length} markers`:`${data.rsz.instances.length} instances`):`${data.labels.length} labels`;
+    setStatus('enc-status',`Encoded · ${what} → ${encOutName}`,'ok');
   }catch(e){setStatus('enc-status','Error: '+e.message,'err');}
 }
 
@@ -1112,9 +1364,10 @@ setupDrop('drop-gmd','gmd-file-input',async f=>{
     setStatus('gmd-status',`Auto-detected GS56 · ${formatBytes(f.size)}`,'ok');
     document.getElementById('btn-gmd').disabled=false;
   } else if(det.ok && !det.isGs56){
-    document.getElementById('gmd-ver-badge').textContent='GS4';
-    setMeta('gmd-meta',[['Format','GS4 (no labels)'],['File',f.name],['Size',formatBytes(f.size)]]);
-    setStatus('gmd-status','GS4 files contain no script labels and cannot be converted to GMD','err');
+    const kindName={gs4:'GS4',markers:'MARKERS',generic:'RSZ'}[det.kind]||'?';
+    document.getElementById('gmd-ver-badge').textContent=kindName;
+    setMeta('gmd-meta',[['Format',kindName+' (no labels)'],['File',f.name],['Size',formatBytes(f.size)]]);
+    setStatus('gmd-status',kindName+' files contain no script labels and cannot be converted to GMD (use the USER2 → JSON tab instead)','err');
     document.getElementById('btn-gmd').disabled=true;
   } else {
     document.getElementById('gmd-ver-badge').textContent='?';
@@ -1129,7 +1382,7 @@ async function runGmd(){
   setStatus('gmd-status','Stage 1/2: Decoding USR2…','');
   try{
     const res=decodeUsr2(gmdFileData);
-    if(!res.isGs56)throw new Error('GS4 files contain no script labels');
+    if(!res.isGs56)throw new Error('This file contains no script labels');
 
     setStatus('gmd-status','Stage 2/2: Encoding GMD V'+gmdTargetVer+'…','');
     const result=jsonToGmd(res.data, gmdTargetVer);
